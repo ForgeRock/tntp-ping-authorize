@@ -6,7 +6,7 @@
  * Copyright 2024 Ping Identity Corporation. All Rights Reserved
  */
 
-package org.forgerock.am.marketplace.pingone;
+package org.forgerock.am.marketplace.pingoneauthorize;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,12 +48,12 @@ import org.slf4j.LoggerFactory;
  * </p>
  * @since AM 5.5.0
  */
-public class PingAuthorizePlugin extends AbstractNodeAmPlugin {
+public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 
-	static private String currentVersion = "0.0.1";
+	static private String currentVersion = "0.0.30";
 	public static final String logAppender = "[Version: " + currentVersion + "][Marketplace] ";
-	private final Logger logger = LoggerFactory.getLogger(PingAuthorizePlugin.class);
-	private String loggerPrefix = "[PingOnePlugin]" + PingAuthorizePlugin.logAppender;
+	private final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
+	private String loggerPrefix = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.logAppender;
 
 	/**
 	 * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
@@ -63,9 +63,9 @@ public class PingAuthorizePlugin extends AbstractNodeAmPlugin {
 	 */
 	@Override
 	protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
-		return Collections.singletonMap(PingAuthorizePlugin.currentVersion,
+		return Collections.singletonMap(PingOneAuthorizePlugin.currentVersion,
 		                                Arrays.asList(
-				                                PingAuthorizeNode.class));
+				                                PingOneAuthorizeNode.class));
 	}
 
 	/**
@@ -105,7 +105,7 @@ public class PingAuthorizePlugin extends AbstractNodeAmPlugin {
 		logger.error(loggerPrefix + "fromVersion = " + fromVersion);
 		logger.error(loggerPrefix + "currentVersion = " + currentVersion);
 		try {
-			pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
+			pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
 		} catch (Exception e) {
 			throw new PluginException(e.getMessage());
 		}
@@ -120,6 +120,6 @@ public class PingAuthorizePlugin extends AbstractNodeAmPlugin {
 	 */
 	@Override
 	public String getPluginVersion() {
-		return PingAuthorizePlugin.currentVersion;
+		return PingOneAuthorizePlugin.currentVersion;
 	}
 }

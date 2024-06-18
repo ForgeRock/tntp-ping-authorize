@@ -12,12 +12,12 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>TNTPPingAuthorize</artifactId>
+    <artifactId>TNTPPingOneAuthorize</artifactId>
 
     <groupId>org.forgerock.am.marketplace</groupId>
-    <version>0.0.1</version>
-    <name>PingAuthorize</name>
-    <description>PingAuthorize Integration</description>
+    <version>0.0.30</version>
+    <name>PingOneAuthorize</name>
+    <description>PingOneAuthorize Integration</description>
 
     <properties>
         <am.version>LATEST</am.version>
