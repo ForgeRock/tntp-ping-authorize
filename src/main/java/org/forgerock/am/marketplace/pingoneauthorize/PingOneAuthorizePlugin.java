@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 
-	static private String currentVersion = "0.0.30";
+	static private String currentVersion = "0.0.66";
 	public static final String logAppender = "[Version: " + currentVersion + "][Marketplace] ";
 	private final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
 	private String loggerPrefix = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.logAppender;
@@ -65,7 +65,8 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 	protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
 		return Collections.singletonMap(PingOneAuthorizePlugin.currentVersion,
 		                                Arrays.asList(
-				                                PingOneAuthorizeNode.class));
+				                                PingOneAuthorizeNode.class,
+				                                PingAuthorizeNode.class));
 	}
 
 	/**
@@ -106,6 +107,7 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 		logger.error(loggerPrefix + "currentVersion = " + currentVersion);
 		try {
 			pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
+			pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
 		} catch (Exception e) {
 			throw new PluginException(e.getMessage());
 		}

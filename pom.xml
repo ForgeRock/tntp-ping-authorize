@@ -15,9 +15,9 @@
     <artifactId>TNTPPingOneAuthorize</artifactId>
 
     <groupId>org.forgerock.am.marketplace</groupId>
-    <version>0.0.30</version>
+    <version>0.0.66</version>
     <name>PingOneAuthorize</name>
-    <description>PingOneAuthorize Integration</description>
+    <description>PingOneAuthorize and PingAuthorize Integration</description>
 
     <properties>
         <am.version>LATEST</am.version>

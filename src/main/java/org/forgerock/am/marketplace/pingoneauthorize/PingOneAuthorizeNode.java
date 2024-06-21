@@ -40,7 +40,6 @@ import org.forgerock.openam.core.realms.Realm;
 
 import com.google.inject.assistedinject.Assisted;
 import com.sun.identity.sm.RequiredValueValidator;
-import org.jclouds.json.Json;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,24 +55,23 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private final Realm realm;
 
     private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizeNode.class);
-    private String loggerPrefix = "[PingAuthorizeNode]" + PingOneAuthorizePlugin.logAppender;
+    private final String loggerPrefix = "[PingOneAuthorizeNode]" + PingOneAuthorizePlugin.logAppender;
 
     private static final String BUNDLE = PingOneAuthorizeNode.class.getName();
-    private static final String STATEMENTS = "statements";
+
+    // Attribute keys
+    private static final String STATEMENTCODESATTR = "statementCodes";
+    private static final String USECONTINUEATTR = "useContinue";
+    private static final String STATEMENT_KEY = "statements";
+
+    // Outcomes
     private static final String PERMIT = "PERMIT";
     private static final String DENY = "DENY";
     private static final String INDETERMINATE = "INDETERMINATE";
 
     private final Config config;
-    private TNTPPingOneConfig tntpPingOneConfig;
-    private final PingOneAuthorizeClient client;
-
-    public enum FlowType { PAZ, P1AZ }
-
-    public String getFlowType(FlowType flowType) {
-        if (flowType == FlowType.PAZ) {return "PAZ";}
-        else return "P1AZ";
-    }
+    private final TNTPPingOneConfig tntpPingOneConfig;
+    private final AuthorizeClient client;
 
     public int getUseContinue() {
         if(config.useContinue()) {
@@ -91,40 +89,30 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          * The Configured service
          */
 
-        @Attribute(order = 100)
-        default FlowType flowType() {
-            return FlowType.P1AZ;
-        }
-
-        @Attribute(order = 200)
-        default String endpointUrl() {
-            return "";
-        }
-
-        @Attribute(order = 400, choiceValuesClass = TNTPPingOneConfigChoiceValues.class)
+        @Attribute(order = 100, choiceValuesClass = TNTPPingOneConfigChoiceValues.class)
         default String tntpPingOneConfigName() {
             return TNTPPingOneConfigChoiceValues.createTNTPPingOneConfigName("Global Default");
         }
 
-        @Attribute(order = 500, validators = {RequiredValueValidator.class})
+        @Attribute(order = 200, validators = {RequiredValueValidator.class})
         String decisionEndpointID();
 
-        @Attribute(order = 600)
+        @Attribute(order = 300)
         List<String> attributeMap();
 
-        @Attribute(order = 700)
-        default List<String> statements() {
+        @Attribute(order = 400)
+        default List<String> statementCodes() {
             return emptyList();
         }
 
-        @Attribute(order = 800)
+        @Attribute(order = 500)
         default boolean useContinue() {
             return false;
         }
     }
 
     @Inject
-    public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm, PingOneAuthorizeClient client) {
+    public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm, AuthorizeClient client) {
         this.config = config;
         this.realm = realm;
         this.client = client;
@@ -138,44 +126,35 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         // Loops through the string list `attributeMap`
         // Places the key (from attributeMap) and value (from nodeState) into the `retrievedAttributes` HashMap.
-        Map<String, String> parameters = new HashMap<>();
+        JsonValue parameters = new JsonValue(new HashMap<String, String>(1));
         for (String key : config.attributeMap()) {
-            parameters.put(key, String.valueOf((nodeState.get(key))));
+            parameters.put(key, nodeState.get(key));;
         }
-
-        logger.error("\n" + "nodeState contents: {}", nodeState);
-        logger.error("\n" + "attributeMap contents: {}", config.attributeMap());
-        logger.error("\n" + "attributeMap: {}", config.attributeMap());
-        logger.error("\n" + "parameters: {}", parameters);
-        logger.error("\n" + "JSON parameters: {}", JsonValue.json(parameters));
 
         try {
             TNTPPingOneUtility tntpP1U = TNTPPingOneUtility.getInstance();
             // Retrieve access token
             AccessToken accessToken = tntpP1U.getAccessToken(realm, tntpPingOneConfig);
             // Create and send API call
-            JsonValue response = client.evaluateDecisionRequest(
+            JsonValue response = client.p1AZEvaluateDecisionRequest(
                     accessToken,
                     tntpPingOneConfig,
                     config.decisionEndpointID(),
                     JsonValue.json(parameters));
 
-            logger.error(response.toString());
-
             // Retrieve API response
             nodeState.putTransient("decision", response);
 
-            String statement = response.get(STATEMENTS).get(0).toString();
+            String statement = response.get(STATEMENT_KEY).get(0).get("code").asString();
+
             logger.error(statement);
 
-            if (config.statements().contains(statement)) {
+            if (config.statementCodes().contains(statement)) {
                 logger.error("Statement found in configured statements");
                 return Action.goTo(statement).build();
             }
 
-            String decision = response.get("decision").toString();
-
-            logger.error(decision);
+            String decision = response.get("decision").asString();
 
             switch (decision) {
                 case PERMIT:
@@ -212,7 +191,9 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
             ArrayList<Outcome> outcomes = new ArrayList<>();
 
-            String useContinue = nodeAttributes.get("useContinue").toString();
+            // Retrieves the current state of the continue button
+            String useContinue = nodeAttributes.get(USECONTINUEATTR).asString();
+
             if (useContinue.equals("true")) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
@@ -221,7 +202,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
                 outcomes.add(new Outcome(INDETERMINATE_OUTCOME_ID, bundle.getString(INDETERMINATE_OUTCOME_ID)));
                 if (nodeAttributes.isNotNull()) {
                     // nodeAttributes is null when the node is created
-                    nodeAttributes.get(STATEMENTS).required()
+                    nodeAttributes.get(STATEMENTCODESATTR).required()
                                   .asList(String.class)
                                   .stream()
                                   .map(outcome -> new Outcome(outcome, outcome))

@@ -10,6 +10,7 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -31,10 +32,9 @@ import org.slf4j.LoggerFactory;
  * This is a simple client for executing headless DaVinci flows.
  */
 @Singleton
-public class PingOneAuthorizeClient
-{
+public class AuthorizeClient {
 
-  private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizeClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(AuthorizeClient.class);
 
   private static final String PINGONE_BASE_URL = "https://api.pingone";
 
@@ -44,7 +44,7 @@ public class PingOneAuthorizeClient
    * Creates a new instance that will close the underlying HTTP client upon shutdown.
    */
   @Inject
-  public PingOneAuthorizeClient(ShutdownManager shutdownManager) throws HttpApplicationException {
+  public AuthorizeClient(ShutdownManager shutdownManager) throws HttpApplicationException {
     this.handler = new HttpClientHandler();
     shutdownManager.addShutdownListener(() -> {
       try {
@@ -56,10 +56,9 @@ public class PingOneAuthorizeClient
   }
 
   /**
-   * Executes a headless DaVinci flow policy, returning the result or throwing an exception if there is an unexpected
-   * error. The input schema for the flow should match the input that is passed in here.
+   * Executes a PingOne Authorization flow policy, returning the result or throwing an exception if there is an unexpected error.
    */
-  public JsonValue evaluateDecisionRequest(
+  public JsonValue p1AZEvaluateDecisionRequest(
           AccessToken accessToken,
           TNTPPingOneConfig tntpPingOneConfig,
           String decisionEndpointID,
@@ -77,7 +76,7 @@ public class PingOneAuthorizeClient
     );
 
     // Create the request data body
-    JsonValue parameters = new JsonValue(new HashMap<String, Object>(1));
+    JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
     parameters.put("parameters", decisionData);
 
     request.setUri(uri);
@@ -91,8 +90,45 @@ public class PingOneAuthorizeClient
     try {
       logger.debug("Executing DaVinci decisionEndpointID={} in environmentId={}", decisionEndpointID, tntpPingOneConfig.environmentId());
       Response response = handler.handle(new RootContext(), request).getOrThrow();
-      JsonValue responseJson = new JsonValue(response.getEntity().getJson());
-      return responseJson;
+      return new JsonValue(response.getEntity().getJson());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new NodeProcessException("Interrupted while sending request", e);
+    } catch (IOException e) {
+      throw new NodeProcessException("Encountered exception while getting JSON response", e);
+    }
+  }
+
+  /**
+   * Executes a Ping Authorization flow policy, returning the result or throwing an exception if there is an unexpected error.
+   */
+  public JsonValue pingAZEvaluateDecisionRequest(
+          String pingAZEndpoint,
+          String accessToken,
+          JsonValue decisionData) throws NodeProcessException {
+
+    // Create the request url
+    Request request = new Request();
+    URI uri = URI.create(
+            pingAZEndpoint +
+            "/governance-engine" );
+
+    // Create the request data body
+    JsonValue attributes = new JsonValue(new HashMap<String, Object>(1));
+    attributes.put("attributes", decisionData);
+
+    request.setUri(uri);
+    request.setMethod("POST");
+    request.addHeaders(new GenericHeader("Authorization", "Bearer " + accessToken));
+    request.addHeaders(new GenericHeader("Accept", "application/json"));
+    request.addHeaders(new GenericHeader("Content-Type", "application/json"));
+    request.setEntity(attributes);
+
+    // Send the API request
+    try {
+      logger.debug("Executing Ping Authorize Policy");
+      Response response = handler.handle(new RootContext(), request).getOrThrow();
+      return new JsonValue(response.getEntity().getJson());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new NodeProcessException("Interrupted while sending request", e);
