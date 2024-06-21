@@ -70,13 +70,6 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
     private TNTPPingOneConfig tntpPingOneConfig;
     private final AuthorizeClient client;
 
-    public enum FlowType { PAZ, P1AZ }
-
-    public String getFlowType(FlowType flowType) {
-        if (flowType == FlowType.PAZ) {return "PAZ";}
-        else return "P1AZ";
-    }
-
     public int getUseContinue() {
         if(config.useContinue()) {
             return 1;
