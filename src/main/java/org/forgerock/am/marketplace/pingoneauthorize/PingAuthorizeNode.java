@@ -138,12 +138,6 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             parameters.put(key, String.valueOf((nodeState.get(key))));
         }
 
-        logger.error("\n" + "nodeState contents: {}", nodeState);
-        logger.error("\n" + "attributeMap contents: {}", config.attributeMap());
-        logger.error("\n" + "attributeMap: {}", config.attributeMap());
-        logger.error("\n" + "parameters: {}", parameters);
-        logger.error("\n" + "JSON parameters: {}", JsonValue.json(parameters));
-
         try {
             // Create and send API call
             JsonValue response = client.pingAZEvaluateDecisionRequest(
@@ -163,8 +157,6 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             }
 
             String decision = response.get("decision").asString();
-
-            logger.error(decision);
 
             switch (decision) {
                 case PERMIT:
@@ -201,9 +193,10 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
 
             ArrayList<Outcome> outcomes = new ArrayList<>();
 
-            String useContinue = nodeAttributes.get(USECONTINUEATTR).asString();
+            // Retrieves the current state of the continue button
+            String useContinue = nodeAttributes.get(USECONTINUEATTR).toString();
 
-            if (useContinue.equals("true")) {
+            if (useContinue.contains("true")) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
                 outcomes.add(new Outcome(PERMIT_OUTCOME_ID, bundle.getString(PERMIT_OUTCOME_ID)));

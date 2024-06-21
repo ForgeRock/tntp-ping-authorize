@@ -147,8 +147,6 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
             String statement = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
-            logger.error(statement);
-
             if (config.statementCodes().contains(statement)) {
                 logger.error("Statement found in configured statements");
                 return Action.goTo(statement).build();
@@ -192,9 +190,9 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
             ArrayList<Outcome> outcomes = new ArrayList<>();
 
             // Retrieves the current state of the continue button
-            String useContinue = nodeAttributes.get(USECONTINUEATTR).asString();
+            String useContinue = nodeAttributes.get(USECONTINUEATTR).toString();
 
-            if (useContinue.equals("true")) {
+            if (useContinue.contains("true")) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
                 outcomes.add(new Outcome(PERMIT_OUTCOME_ID, bundle.getString(PERMIT_OUTCOME_ID)));
