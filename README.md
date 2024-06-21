@@ -14,8 +14,8 @@ The PingOne Authorize Node sends a decision request to a specified decision endp
 Identity Cloud provides the following artifacts to enable the PingOne Authorize and PingAuthorize Nodes:
 
 * [PingOne service](https://github.com/ForgeRock/tntp-ping-service/blob/main/README.md)
-* [PingOne Authorize node](https://github.com/ForgeRock/tntp-pingone-authorize/blob/main/docs/pingoneauthorize/README.md)
-* [PingAuthorize node](https://github.com/ForgeRock/tntp-pingone-authorize/blob/main/docs/pingauthorize/README.md)
+* [PingOne Authorize node](https://github.com/ForgeRock/tntp-ping-authorize/blob/main/docs/pingoneauthorize/README.md)
+* [PingAuthorize node](https://github.com/ForgeRock/tntp-ping-authorize/blob/main/docs/pingauthorize/README.md)
 
 You must set up the following before using the PingOne Authorize and PingAuthorize nodes:
 
