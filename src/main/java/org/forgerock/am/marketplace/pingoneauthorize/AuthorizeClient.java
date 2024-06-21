@@ -9,6 +9,7 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -75,24 +76,16 @@ public class PingOneAuthorizeClient
             + decisionEndpointID
     );
 
-    // { "firstName": "\"Matthew\"", "lastName": "\"Teets\"", "IpAddress": "\"127.0.0.1\"" } //
-    logger.error("\n" + "Client decisionData: {}", decisionData);
-
     // Create the request data body
-//    JsonValue body = JsonValue.json(decisionData.toString());
-//    decisionData.put("parameters", body);
-
-    JsonValue parameters = new JsonValue(decisionData);
+    JsonValue parameters = new JsonValue(new HashMap<String, Object>(1));
     parameters.put("parameters", decisionData);
 
-    logger.error("\n" + "Client parameters: {}", parameters);
-
     request.setUri(uri);
-    request.setMethod(""); // POST
+    request.setMethod("POST");
     request.addHeaders(new GenericHeader("Authorization", "Bearer " + accessToken));
     request.addHeaders(new GenericHeader("Accept", "application/json"));
     request.addHeaders(new GenericHeader("Content-Type", "application/json"));
-    request.setEntity(decisionData);
+    request.setEntity(parameters);
 
     // Send the API request
     try {
