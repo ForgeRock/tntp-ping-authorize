@@ -148,7 +148,6 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
             String statement = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
             if (config.statementCodes().contains(statement)) {
-                logger.error("Statement found in configured statements");
                 return Action.goTo(statement).build();
             }
 

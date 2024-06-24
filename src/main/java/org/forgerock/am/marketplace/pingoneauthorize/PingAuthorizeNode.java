@@ -142,10 +142,8 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             nodeState.putTransient("decision", response);
 
             String statementCode = response.get(STATEMENT_KEY).get(0).get("code").asString();
-            logger.error(statementCode);
 
             if (config.statementCodes().contains(statementCode)) {
-                logger.error("Statement found in configured statements");
                 return Action.goTo(statementCode).build();
             }
 
