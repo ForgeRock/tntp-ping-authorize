@@ -75,7 +75,7 @@ public class AuthorizeClient {
             + decisionEndpointID
     );
 
-    // Create the request data body
+    // Create the request body
     JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
     parameters.put("parameters", decisionData);
 
@@ -113,7 +113,7 @@ public class AuthorizeClient {
             pingAZEndpoint +
             "/governance-engine" );
 
-    // Create the request data body
+    // Create the request body
     JsonValue attributes = new JsonValue(new HashMap<String, Object>(1));
     attributes.put("attributes", decisionData);
 

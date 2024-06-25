@@ -141,14 +141,15 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             // Retrieve API response
             nodeState.putTransient("decision", response);
 
+            // Retrieves the "code" value from the "statements" object inside the API response body
             String statementCode = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
             if (config.statementCodes().contains(statementCode)) {
                 return Action.goTo(statementCode).build();
             }
 
+            // The API response's "decision" value will determine which outcome is executed
             String decision = response.get("decision").asString();
-
             switch (decision) {
                 case PERMIT:
                     return Action.goTo(PERMIT_OUTCOME_ID).build();
@@ -187,6 +188,7 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             // Retrieves the current state of the continue button
             String useContinue = nodeAttributes.get(USECONTINUEATTR).toString();
 
+            // Do not render other outcomes if button = "true"
             if (useContinue.contains("true")) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
