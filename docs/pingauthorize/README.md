@@ -83,13 +83,17 @@ This node produces no outputs.
 
 ## Outcomes
 
-`Success`
+`Permit`
 
-All checks passed.
+Satisfied the active policy's permit condition and authorized the user.
 
-`Fail`
+`Deny`
 
-One of the checks failed.
+Satisfied the active policy's deny condition and did not authorize the user.
+
+`Indeterminate`
+
+Satisfied neither the active policy's permit or deny conditions.
 
 `Error`
 
@@ -97,5 +101,4 @@ There was an error during the authorization process.
 
 ## Troubleshooting
 
-If this node logs an error, review the log messages to find the reason for the error and address the issue
-appropriately.
+If this node logs an error, review the log messages to find the reason for the error and address the issue appropriately.

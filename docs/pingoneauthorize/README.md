@@ -89,7 +89,7 @@ Satisfied the active policy's permit condition and authorized the user.
 
 `Deny`
 
-Satisfied the active policy's deny condition and did not authorized the user.
+Satisfied the active policy's deny condition and did not authorize the user.
 
 `Indeterminate`
 
@@ -97,10 +97,8 @@ Satisfied neither the active policy's permit or deny conditions.
 
 `Error`
 
-There was an error during the authorizatioin process.
-
+There was an error during the authorization process.
 
 ## Troubleshooting
-
 
 If this node logs an error, review the log messages to find the reason for the error and address the issue appropriately.

@@ -17,9 +17,14 @@ Identity Cloud provides the following artifacts to enable the PingOne Authorize 
 * [PingOne Authorize node](https://github.com/ForgeRock/tntp-ping-authorize/blob/main/docs/pingoneauthorize/README.md)
 * [PingAuthorize node](https://github.com/ForgeRock/tntp-ping-authorize/blob/main/docs/pingauthorize/README.md)
 
-You must set up the following before using the PingOne Authorize and PingAuthorize nodes:
+You must set up the following before using the PingOne Authorize and PingAuthorize nodes.
 
+PingOne Authorize Setup:
 * [Create an authorize policy](https://docs.pingidentity.com/r/en-us/pingone/p1az_policies)
 * [Create a worker application](https://docs.pingidentity.com/r/en-us/pingone/p1_add_app_worker)
     * Requires [Identity Data Admin](https://apidocs.pingidentity.com/pingone/platform/v1/api/#roles) role
 * [PingOne service](https://github.com/ForgeRock/tntp-ping-service/tree/cloudprep?tab=readme-ov-file#ping-one-service)
+
+PingAuthorize Setup:
+* [PingAuthorize Documentation](https://docs.pingidentity.com/r/en-us/pingauthorize-100/paz_home_landing_page)
+* [Installing PingAuthorize](https://docs.pingidentity.com/r/en-us/pingauthorize-100/paz_install_pingauthorize)
