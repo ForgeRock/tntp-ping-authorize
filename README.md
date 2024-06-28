@@ -29,6 +29,20 @@ PingAuthorize Setup:
 * [PingAuthorize Documentation](https://docs.pingidentity.com/r/en-us/pingauthorize-100/paz_home_landing_page)
 * [Installing PingAuthorize](https://docs.pingidentity.com/r/en-us/pingauthorize-100/paz_install_pingauthorize)
 
+<!-- SUPPORT -->
+## Support
+
+If you encounter any issues, be sure to check our **[Troubleshooting](https://backstage.forgerock.com/knowledge/kb/article/a68547609)** pages.
+
+Support tickets can be raised whenever you need our assistance; here are some examples of when it is appropriate to open a ticket (but not limited to):
+
+* Suspected bugs or problems with Ping Identity software.
+* Requests for assistance
+
+You can raise a ticket using **[BackStage](https://backstage.forgerock.com/support/tickets)**, our customer support portal that provides one stop access to Ping Identity services.
+
+BackStage shows all currently open support tickets and allows you to raise a new one by clicking **New Ticket**.
+
 <!-- COLLABORATION -->
 
 ## Contributing
