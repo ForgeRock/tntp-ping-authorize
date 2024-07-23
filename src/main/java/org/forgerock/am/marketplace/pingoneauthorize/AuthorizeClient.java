@@ -23,6 +23,7 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.auth.node.api.NodeProcessException;
 import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfig;
+import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.thread.listener.ShutdownManager;
 import org.slf4j.Logger;
@@ -37,6 +38,8 @@ public class AuthorizeClient {
   private static final Logger logger = LoggerFactory.getLogger(AuthorizeClient.class);
 
   private static final String PINGONE_BASE_URL = "https://api.pingone";
+  private static final String ENVIRONMENTS_PATH = "/environments/";
+  private static final String DECISION_ENDPOINTS_PATH = "/decisionEndpoints/";
 
   private final HttpClientHandler handler;
 
@@ -60,20 +63,17 @@ public class AuthorizeClient {
    */
   public JsonValue p1AZEvaluateDecisionRequest(
           AccessToken accessToken,
-          TNTPPingOneConfig tntpPingOneConfig,
+          PingOneWorkerConfig.Worker worker,
           String decisionEndpointID,
           JsonValue decisionData) throws NodeProcessException {
 
     // Create the request url
     Request request = new Request();
+
     URI uri = URI.create(
-            PINGONE_BASE_URL
-            + tntpPingOneConfig.environmentRegion().getDomainSuffix()
-            + "/v1/environments/"
-            + tntpPingOneConfig.environmentId()
-            + "/decisionEndpoints/"
-            + decisionEndpointID
-    );
+        worker.apiUrl() +
+        ENVIRONMENTS_PATH + worker.environmentId() +
+        DECISION_ENDPOINTS_PATH + decisionEndpointID);
 
     // Create the request body
     JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
@@ -88,7 +88,7 @@ public class AuthorizeClient {
 
     // Send the API request
     try {
-      logger.debug("Executing DaVinci decisionEndpointID={} in environmentId={}", decisionEndpointID, tntpPingOneConfig.environmentId());
+      logger.debug("Executing DaVinci decisionEndpointID={} in environmentId={}", decisionEndpointID, worker.environmentId());
       Response response = handler.handle(new RootContext(), request).getOrThrow();
       return new JsonValue(response.getEntity().getJson());
     } catch (InterruptedException e) {

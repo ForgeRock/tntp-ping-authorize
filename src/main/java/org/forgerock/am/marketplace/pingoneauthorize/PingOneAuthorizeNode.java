@@ -31,9 +31,9 @@ import org.forgerock.openam.auth.node.api.NodeProcessException;
 import org.forgerock.openam.auth.node.api.NodeState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
-import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfig;
-import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfigChoiceValues;
-import org.forgerock.openam.auth.service.marketplace.TNTPPingOneUtility;
+import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
+import org.forgerock.openam.integration.pingone.PingOneWorkerService;
+import org.forgerock.openam.integration.pingone.annotations.PingOneWorker;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.forgerock.openam.core.realms.Realm;
 
@@ -69,7 +69,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private static final String INDETERMINATE = "INDETERMINATE";
 
     private final Config config;
-    private final TNTPPingOneConfig tntpPingOneConfig;
+    private final PingOneWorkerService pingOneWorkerService;
     private final AuthorizeClient client;
 
     public int getUseContinue() {
@@ -85,12 +85,13 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
      */
     public interface Config {
         /**
-         * The Configured service
+         * Reference to the PingOne Worker App.
+         *
+         * @return The PingOne Worker App.
          */
-        @Attribute(order = 100, choiceValuesClass = TNTPPingOneConfigChoiceValues.class)
-        default String tntpPingOneConfigName() {
-            return TNTPPingOneConfigChoiceValues.createTNTPPingOneConfigName("Global Default");
-        }
+        @Attribute(order = 100, requiredValue = true)
+        @PingOneWorker
+        PingOneWorkerConfig.Worker pingOneWorker();
 
         @Attribute(order = 200, validators = {RequiredValueValidator.class})
         String decisionEndpointID();
@@ -110,11 +111,12 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     }
 
     @Inject
-    public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm, AuthorizeClient client) {
+    public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm,
+                                PingOneWorkerService pingOneWorkerService, AuthorizeClient client) {
         this.config = config;
         this.realm = realm;
         this.client = client;
-        this.tntpPingOneConfig = TNTPPingOneConfigChoiceValues.getTNTPPingOneConfig(config.tntpPingOneConfigName());
+        this.pingOneWorkerService = pingOneWorkerService;
     }
 
     @Override
@@ -130,13 +132,19 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
         }
 
         try {
-            TNTPPingOneUtility tntpP1U = TNTPPingOneUtility.getInstance();
-            // Retrieve access token
-            AccessToken accessToken = tntpP1U.getAccessToken(realm, tntpPingOneConfig);
+            // Get PingOne Access Token
+            PingOneWorkerConfig.Worker worker = config.pingOneWorker();
+            AccessToken accessToken = pingOneWorkerService.getAccessToken(realm, worker);
+
+            if (accessToken == null) {
+                logger.error("Unable to get access token for PingOne Worker.");
+                return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
+            }
+
             // Create and send API call
             JsonValue response = client.p1AZEvaluateDecisionRequest(
                     accessToken,
-                    tntpPingOneConfig,
+                    worker,
                     config.decisionEndpointID(),
                     JsonValue.json(parameters));
 

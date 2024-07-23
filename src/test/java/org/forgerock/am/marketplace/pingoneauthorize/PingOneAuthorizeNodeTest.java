@@ -86,7 +86,7 @@ public class PingOneAuthorizeNodeTest {
         given(pingOneWorkerService.getWorker(any(), anyString())).willReturn(Optional.of(worker));
         given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(accessToken);
 
-        node = spy(new PingOneAuthorizeNode(config, realm, client));
+        node = spy(new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client));
     }
 
     @Test
