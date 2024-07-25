@@ -79,6 +79,8 @@ public class AuthorizeClient {
     JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
     parameters.put("parameters", decisionData);
 
+    logger.error("\n\nParameters is set to: {}\n\n", parameters);
+
     request.setUri(uri);
     request.setMethod("POST");
     request.addHeaders(new GenericHeader("Authorization", "Bearer " + accessToken));

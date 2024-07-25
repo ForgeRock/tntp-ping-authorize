@@ -56,23 +56,14 @@ import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-public class PingOneAuthorizeNodeTest {
+public class PingAuthorizeTest {
 
     private static final Logger log = LoggerFactory.getLogger(PingOneAuthorizeNodeTest.class);
     @RegisterExtension
     public LoggerExtension loggerExtension = new LoggerExtension(PingOneAuthorizeNode.class);
 
     @Mock
-    PingOneAuthorizeNode.Config config;
-
-    @Mock
-    PingOneWorkerService pingOneWorkerService;
-
-    @Mock
-    AccessToken accessToken;
-
-    @Mock
-    PingOneWorkerConfig.Worker worker;
+    PingAuthorizeNode.Config config;
 
     @Mock
     Realm realm;
@@ -80,30 +71,14 @@ public class PingOneAuthorizeNodeTest {
     @Mock
     AuthorizeClient client;
 
-    PingOneAuthorizeNode node;
+    PingAuthorizeNode node;
 
     private static final String USER = "testUser";
     public static final String PINGONE_AUTHORIZE_ATTRIBUTE = "some-attribute-key";
 
     @BeforeEach
     public void setup() throws Exception {
-        given(pingOneWorkerService.getWorker(any(), anyString())).willReturn(Optional.of(worker));
-        given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(accessToken);
-
-        node = spy(new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client));
-    }
-
-    @Test
-    public void testPingOneUserIdNotFoundInSharedState() throws Exception {
-        // Given
-        JsonValue sharedState = json(object(field(USERNAME, USER), field(REALM, "/realm")));
-        JsonValue transientState = json(object());
-
-        // When
-        Action result = node.process(getContext(sharedState, transientState, emptyList()));
-
-        // Then
-        assertThat(result.outcome).isEqualTo(CLIENT_ERROR_OUTCOME_ID);
+        node = spy(new PingAuthorizeNode(config, realm, client));
     }
 
     @ParameterizedTest
@@ -112,13 +87,16 @@ public class PingOneAuthorizeNodeTest {
             "DENY,deny",
             "INDETERMINATE,indeterminate",
     })
-    public void testReturnOutcomePingOneAuthorize(String decision, String expectedOutcome) throws Exception {
+    public void testReturnOutcomePingAuthorize(String decision, String expectedOutcome) throws Exception {
         // Given
         JsonValue sharedState = json(object(
                 field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+                ));
 
-        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
         given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
         given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
@@ -143,7 +121,7 @@ public class PingOneAuthorizeNodeTest {
         System.out.println("response" + response);
         System.out.println("\n");
 
-        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
 
         // When
         Action result = node.process(getContext(sharedState, json(object()), emptyList()));
@@ -152,24 +130,6 @@ public class PingOneAuthorizeNodeTest {
         assertThat(result.outcome).isEqualTo(expectedOutcome);
     }
 
-    @Test
-    public void testPingOneCommunicationFailed() throws Exception {
-        // Given
-        given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(null);
-        given(pingOneWorkerService.getAccessToken(realm, worker)).willThrow(new PingOneWorkerException(""));
-        JsonValue sharedState = json(object(
-                field(USERNAME, USER),
-                field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")
-                                           ));
-        JsonValue transientState = json(object());
-
-        // When
-        Action result = node.process(getContext(sharedState, transientState, emptyList()));
-
-        // Then
-        assertThat(result.outcome).isEqualTo(CLIENT_ERROR_OUTCOME_ID);
-    }
 
     private TreeContext getContext(JsonValue sharedState, JsonValue transientState,
                                    List<? extends Callback> callbacks) {

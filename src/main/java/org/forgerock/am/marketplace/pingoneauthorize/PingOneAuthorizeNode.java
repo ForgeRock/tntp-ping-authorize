@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 import javax.inject.Inject;
@@ -146,7 +147,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
                     accessToken,
                     worker,
                     config.decisionEndpointID(),
-                    JsonValue.json(parameters));
+                    parameters);
 
             // Retrieve API response
             nodeState.putTransient("decision", response);

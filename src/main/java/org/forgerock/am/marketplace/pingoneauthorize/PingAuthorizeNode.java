@@ -126,9 +126,9 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
 
         // Loops through the string list `attributeMap`
         // Places the key (from attributeMap) and value (from nodeState) into the `retrievedAttributes` HashMap.
-        Map<String, String> parameters = new HashMap<>();
+        JsonValue parameters = new JsonValue(new HashMap<String, String>(1));
         for (String key : config.attributeMap()) {
-            parameters.put(key, String.valueOf((nodeState.get(key))));
+            parameters.put(key, nodeState.get(key));;
         }
 
         try {
@@ -136,7 +136,7 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             JsonValue response = client.pingAZEvaluateDecisionRequest(
                     config.endpointUrl(),
                     accessToken,
-                    JsonValue.json(parameters));
+                    parameters);
 
             // Retrieve API response
             nodeState.putTransient("decision", response);
