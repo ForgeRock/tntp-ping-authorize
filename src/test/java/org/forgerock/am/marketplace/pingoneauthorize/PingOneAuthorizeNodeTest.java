@@ -10,7 +10,6 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.forgerock.json.JsonValue.array;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
@@ -18,11 +17,8 @@ import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -51,14 +47,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class PingOneAuthorizeNodeTest {
 
-    private static final Logger log = LoggerFactory.getLogger(PingOneAuthorizeNodeTest.class);
     @RegisterExtension
     public LoggerExtension loggerExtension = new LoggerExtension(PingOneAuthorizeNode.class);
 
@@ -88,6 +81,7 @@ public class PingOneAuthorizeNodeTest {
     @BeforeEach
     public void setup() throws Exception {
         given(pingOneWorkerService.getWorker(any(), anyString())).willReturn(Optional.of(worker));
+
         given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(accessToken);
 
         node = spy(new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client));
@@ -123,10 +117,6 @@ public class PingOneAuthorizeNodeTest {
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
         given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
 
-        System.out.println("\n");
-        System.out.println("decision: " + decision);
-        System.out.println("expected outcome: " + expectedOutcome);
-
         JsonValue response = null;
 
         if (decision.equals("PERMIT")) {
@@ -139,9 +129,6 @@ public class PingOneAuthorizeNodeTest {
             response = json(object(
                     field("decision", decision)));
         }
-
-        System.out.println("response" + response);
-        System.out.println("\n");
 
         when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
 

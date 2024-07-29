@@ -12,11 +12,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
 import org.forgerock.openam.auth.node.api.AbstractNodeAmPlugin;
 import org.forgerock.openam.auth.node.api.Node;
 import org.forgerock.openam.plugins.PluginException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.Arrays.asList;
 
 /**
  * Definition of an <a href="https://backstage.forgerock.com/docs/am/6/apidocs/org/forgerock/openam/auth/node/api/AbstractNodeAmPlugin.html">AbstractNodeAmPlugin</a>. 
@@ -49,11 +52,10 @@ import org.slf4j.LoggerFactory;
  * @since AM 5.5.0
  */
 public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
-
-	static private String currentVersion = "0.1.5";
-	public static final String logAppender = "[Version: " + currentVersion + "][Marketplace] ";
-	private final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
-	private String loggerPrefix = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.logAppender;
+	protected static final String CURRENT_VERSION = "1.0.0";
+	protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
+	private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
+	private String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
 	/**
 	 * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
@@ -63,34 +65,21 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 	 */
 	@Override
 	protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
-		return Collections.singletonMap(PingOneAuthorizePlugin.currentVersion,
-		                                Arrays.asList(
-				                                PingOneAuthorizeNode.class,
-				                                PingAuthorizeNode.class));
+		return new ImmutableMap.Builder<String, Iterable<? extends Class<? extends Node>>>()
+				.put("1.0.0", asList(PingOneAuthorizeNode.class,
+				                     PingAuthorizeNode.class))
+				.build();
 	}
 
 	/**
-	 * Handle plugin installation. This method will only be called once, on first AM startup once the plugin
-	 * is included in the classpath. The {@link #onStartup()} method will be called after this one.
+	 * The plugin version. This must be in semver (semantic version) format.
 	 *
-	 * No need to implement this unless your AuthNode has specific requirements on install.
+	 * @return The version of the plugin.
+	 * @see <a href="https://www.osgi.org/wp-content/uploads/SemanticVersioning.pdf">Semantic Versioning</a>
 	 */
 	@Override
-	public void onInstall() throws PluginException {
-		super.onInstall();
-	}
-
-	/**
-	 * Handle plugin startup. This method will be called every time AM starts, after {@link #onInstall()},
-	 * {@link #onAmUpgrade(String, String)} and {@link #upgrade(String)} have been called (if relevant).
-	 *
-	 * No need to implement this unless your AuthNode has specific requirements on startup.
-	 *
-	 * @param startupType The type of startup that is taking place.
-	 */
-	@Override
-	public void onStartup() throws PluginException {
-		super.onStartup();
+	public String getPluginVersion() {
+		return PingOneAuthorizePlugin.CURRENT_VERSION;
 	}
 
 	/**
@@ -103,8 +92,9 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 	 */
 	@Override
 	public void upgrade(String fromVersion) throws PluginException {
-		logger.error(loggerPrefix + "fromVersion = " + fromVersion);
-		logger.error(loggerPrefix + "currentVersion = " + currentVersion);
+		logger.debug("{} fromVersion = {}", LOGGER_PREFIX, fromVersion);
+		logger.debug("{} currentVersion = {}", LOGGER_PREFIX, CURRENT_VERSION);
+
 		try {
 			pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
 			pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
@@ -112,16 +102,5 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
 			throw new PluginException(e.getMessage());
 		}
 		super.upgrade(fromVersion);
-	}
-
-	/**
-	 * The plugin version. This must be in semver (semantic version) format.
-	 *
-	 * @return The version of the plugin.
-	 * @see <a href="https://www.osgi.org/wp-content/uploads/SemanticVersioning.pdf">Semantic Versioning</a>
-	 */
-	@Override
-	public String getPluginVersion() {
-		return PingOneAuthorizePlugin.currentVersion;
 	}
 }

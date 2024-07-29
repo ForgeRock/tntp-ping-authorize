@@ -18,7 +18,6 @@ import org.forgerock.openam.auth.node.api.NodeState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfig;
-import org.forgerock.openam.core.realms.Realm;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
 
 import static java.util.Collections.emptyList;
@@ -46,10 +44,8 @@ import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode
                tags = {"marketplace", "trustnetwork"})
 public class PingAuthorizeNode extends SingleOutcomeNode {
 
-    private final Realm realm;
-
     private static final Logger logger = LoggerFactory.getLogger(PingAuthorizeNode.class);
-    private final String loggerPrefix = "[PingAuthorizeNode]" + PingOneAuthorizePlugin.logAppender;
+    private final String loggerPrefix = "[PingAuthorizeNode]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
     private static final String BUNDLE = PingAuthorizeNode.class.getName();
 
@@ -83,42 +79,68 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
      */
     public interface Config {
         /**
-         * The Configured service
+         * A shared state attribute containing the Endpoint URL.
+         *
+         * @return The Endpoint URL shared state attribute; otherwise, it returns an empty list.
          */
-
         @Attribute(order = 100)
         default String endpointUrl() {
             return "";
         }
 
+        /**
+         * A shared state attribute containing the Access Token.
+         *
+         * @return The Access Token shared state attribute.
+         */
         @Attribute(order = 200)
         default String accessTokenAttribute() {
             return "";
         }
 
+        /**
+         * The list of Policy attributes defined within the PingOne Authorize Trust Framework.
+         *
+         * @return List of Policy attributes as a List of Strings.
+         */
         @Attribute(order = 300)
         List<String> attributeMap();
 
+        /**
+         * The list of Statement codes defined within the PingOne Authorize Policy.
+         *
+         * @return List of Statement codes if they are provided; otherwise, it returns an empty list.
+         */
         @Attribute(order = 400)
         default List<String> statementCodes() {
             return emptyList();
         }
 
+        /**
+         * Sets the Node to render a single outcome.
+         *
+         * @return true if the node is set a single outcome, otherwise false.
+         */
         @Attribute(order = 500)
         default boolean useContinue() {
             return false;
         }
     }
 
+    /**
+     * The PingOne Credentials Find Wallets node constructor.
+     *
+     * @param config               the node configuration.
+     * @param client               the {@link AuthorizeClient} instance.
+     */
     @Inject
-    public PingAuthorizeNode(@Assisted Config config, @Assisted Realm realm, AuthorizeClient client) {
+    public PingAuthorizeNode(@Assisted Config config, AuthorizeClient client) {
         this.config = config;
-        this.realm = realm;
         this.client = client;
     }
 
     @Override
-    public Action process(TreeContext context) throws NodeProcessException {
+    public Action process(TreeContext context) {
         // create the flow input based on the node state
         NodeState nodeState = context.getStateFor(this);
 

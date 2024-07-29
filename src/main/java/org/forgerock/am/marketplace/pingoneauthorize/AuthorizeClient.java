@@ -21,8 +21,6 @@ import org.forgerock.http.header.GenericHeader;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.json.JsonValue;
-import org.forgerock.openam.auth.node.api.NodeProcessException;
-import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfig;
 import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.thread.listener.ShutdownManager;
@@ -30,14 +28,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is a simple client for executing headless DaVinci flows.
+ * Service to integrate with PingOne Authorize APIs.
  */
 @Singleton
 public class AuthorizeClient {
 
   private static final Logger logger = LoggerFactory.getLogger(AuthorizeClient.class);
 
-  private static final String PINGONE_BASE_URL = "https://api.pingone";
   private static final String ENVIRONMENTS_PATH = "/environments/";
   private static final String DECISION_ENDPOINTS_PATH = "/decisionEndpoints/";
 
@@ -59,13 +56,21 @@ public class AuthorizeClient {
   }
 
   /**
-   * Executes a PingOne Authorization flow policy, returning the result or throwing an exception if there is an unexpected error.
+   * the POST {{apiPath}}/environments/{{envID}}/decisionEndpoints/{{decisionEndpointID}} executes
+   * a decision request against the decision endpoint specified by its ID in the request URL.
+   *
+   * @param accessToken The {@link AccessToken}
+   * @param worker The worker {@link PingOneWorkerConfig}
+   * @param decisionEndpointID The Decision Endpoint ID
+   * @param decisionData The data for the Parameters object
+   * @return Json containing the response from the operation
+   * @throws PingOneAuthorizeServiceException When API response != 201
    */
   public JsonValue p1AZEvaluateDecisionRequest(
           AccessToken accessToken,
           PingOneWorkerConfig.Worker worker,
           String decisionEndpointID,
-          JsonValue decisionData) throws NodeProcessException {
+          JsonValue decisionData) throws PingOneAuthorizeServiceException {
 
     // Create the request url
     Request request = new Request();
@@ -78,8 +83,6 @@ public class AuthorizeClient {
     // Create the request body
     JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
     parameters.put("parameters", decisionData);
-
-    logger.error("\n\nParameters is set to: {}\n\n", parameters);
 
     request.setUri(uri);
     request.setMethod("POST");
@@ -95,19 +98,25 @@ public class AuthorizeClient {
       return new JsonValue(response.getEntity().getJson());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new NodeProcessException("Interrupted while sending request", e);
+      throw new PingOneAuthorizeServiceException("Interrupted while sending request" + e.getMessage());
     } catch (IOException e) {
-      throw new NodeProcessException("Encountered exception while getting JSON response", e);
+      throw new PingOneAuthorizeServiceException("Encountered exception while getting JSON response" + e.getMessage());
     }
   }
 
   /**
-   * Executes a Ping Authorization flow policy, returning the result or throwing an exception if there is an unexpected error.
+   * the POST {{apiPath}}/governance-engine operation authorizes the client using an individual request.
+   *
+   * @param pingAZEndpoint The PingAuthorize Endpoint
+   * @param accessToken The Access Token
+   * @param decisionData The data for the Attributes object
+   * @return Json containing the response from the operation
+   * @throws PingAuthorizeServiceException When API response != 201
    */
   public JsonValue pingAZEvaluateDecisionRequest(
           String pingAZEndpoint,
           String accessToken,
-          JsonValue decisionData) throws NodeProcessException {
+          JsonValue decisionData) throws PingAuthorizeServiceException {
 
     // Create the request url
     Request request = new Request();
@@ -133,9 +142,9 @@ public class AuthorizeClient {
       return new JsonValue(response.getEntity().getJson());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new NodeProcessException("Interrupted while sending request", e);
+      throw new PingAuthorizeServiceException("Interrupted while sending request" + e.getMessage());
     } catch (IOException e) {
-      throw new NodeProcessException("Encountered exception while getting JSON response", e);
+      throw new PingAuthorizeServiceException("Encountered exception while getting JSON response" + e.getMessage());
     }
   }
 }

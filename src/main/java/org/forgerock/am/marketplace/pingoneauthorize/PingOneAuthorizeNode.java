@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
 
 import javax.inject.Inject;
@@ -44,8 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A node that executes "headless" DaVinci flows as described
- * <a href="https://docs.pingidentity.com/r/en-us/davinci/davinci_api_flow_launch">here</a>.
+ * The PingOne Authorize node lets administrators integrate PingOne Authorize functionality in a journey.
  */
 @Node.Metadata(outcomeProvider = PingOneAuthorizeNode.OutcomeProvider.class,
                configClass = PingOneAuthorizeNode.Config.class,
@@ -55,7 +53,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private final Realm realm;
 
     private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizeNode.class);
-    private final String loggerPrefix = "[PingOneAuthorizeNode]" + PingOneAuthorizePlugin.logAppender;
+    private static final String LOGGER_PREFIX = "[PingOneAuthorizeNode]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
     private static final String BUNDLE = PingOneAuthorizeNode.class.getName();
 
@@ -94,23 +92,51 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
         @PingOneWorker
         PingOneWorkerConfig.Worker pingOneWorker();
 
+        /**
+         * A shared state attribute containing the Decision Endpoint ID
+         *
+         * @return The Decision Endpoint ID shared state attribute.
+         */
         @Attribute(order = 200, validators = {RequiredValueValidator.class})
         String decisionEndpointID();
 
+        /**
+         * The list of Policy attributes defined within the PingOne Authorize Trust Framework.
+         *
+         * @return List of Policy attributes as a List of Strings.
+         */
         @Attribute(order = 300)
         List<String> attributeMap();
 
+        /**
+         * The list of Statement codes defined within the PingOne Authorize Policy.
+         *
+         * @return List of Statement codes if they are provided; otherwise, it returns an empty list.
+         */
         @Attribute(order = 400)
         default List<String> statementCodes() {
             return emptyList();
         }
 
+        /**
+         * Sets the Node to render a single outcome.
+         *
+         * @return true if the node is set a single outcome, otherwise false.
+         */
         @Attribute(order = 500)
         default boolean useContinue() {
             return false;
         }
     }
 
+    /**
+     * The PingOne Credentials Find Wallets node constructor.
+     *
+     * @param config               the node configuration.
+     * @param realm                the realm.
+     * @param pingOneWorkerService the {@link PingOneWorkerService} instance.
+     * @param client               the {@link AuthorizeClient} instance.
+     */
     @Inject
     public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm,
                                 PingOneWorkerService pingOneWorkerService, AuthorizeClient client) {
@@ -174,9 +200,9 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         } catch (Exception ex) {
             String stackTrace = ExceptionUtils.getStackTrace(ex);
-            logger.error(loggerPrefix + "Exception occurred: ", ex);
-            context.getStateFor(this).putTransient(loggerPrefix + "Exception", new Date() + ": " + ex.getMessage());
-            context.getStateFor(this).putTransient(loggerPrefix + "StackTrace", new Date() + ": " + stackTrace);
+            logger.error(LOGGER_PREFIX + "Exception occurred: ", ex);
+            context.getStateFor(this).putTransient(LOGGER_PREFIX + "Exception", new Date() + ": " + ex.getMessage());
+            context.getStateFor(this).putTransient(LOGGER_PREFIX + "StackTrace", new Date() + ": " + stackTrace);
             return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
         }
     }

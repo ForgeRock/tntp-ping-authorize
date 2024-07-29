@@ -10,19 +10,13 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.forgerock.json.JsonValue.array;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyObject;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -32,17 +26,12 @@ import java.util.List;
 import java.util.Optional;
 
 import org.forgerock.json.JsonValue;
-import org.forgerock.oauth2.core.AccessToken;
 import org.forgerock.openam.auth.node.api.Action;
 import org.forgerock.openam.auth.node.api.ExternalRequestContext;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.core.realms.Realm;
-import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
-import org.forgerock.openam.integration.pingone.PingOneWorkerException;
-import org.forgerock.openam.integration.pingone.PingOneWorkerService;
 import org.forgerock.openam.test.extensions.LoggerExtension;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -51,14 +40,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class PingAuthorizeTest {
 
-    private static final Logger log = LoggerFactory.getLogger(PingOneAuthorizeNodeTest.class);
     @RegisterExtension
     public LoggerExtension loggerExtension = new LoggerExtension(PingOneAuthorizeNode.class);
 
@@ -78,7 +64,7 @@ public class PingAuthorizeTest {
 
     @BeforeEach
     public void setup() throws Exception {
-        node = spy(new PingAuthorizeNode(config, realm, client));
+        node = spy(new PingAuthorizeNode(config, client));
     }
 
     @ParameterizedTest
@@ -101,10 +87,6 @@ public class PingAuthorizeTest {
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
         given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
 
-        System.out.println("\n");
-        System.out.println("decision: " + decision);
-        System.out.println("expected outcome: " + expectedOutcome);
-
         JsonValue response = null;
 
         if (decision.equals("PERMIT")) {
@@ -117,9 +99,6 @@ public class PingAuthorizeTest {
             response = json(object(
                     field("decision", decision)));
         }
-
-        System.out.println("response" + response);
-        System.out.println("\n");
 
         when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
 
