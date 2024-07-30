@@ -36,8 +36,7 @@ import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.PERMIT_OUTCOME_ID;
 
 /**
- * A node that executes "headless" DaVinci flows as described
- * <a href="https://docs.pingidentity.com/r/en-us/davinci/davinci_api_flow_launch">here</a>.
+ * The PingAuthorize node lets administrators integrate PingAuthorize functionality in a Journey.
  */
 @Node.Metadata(outcomeProvider = PingAuthorizeNode.OutcomeProvider.class,
                configClass = PingAuthorizeNode.Config.class,
@@ -81,22 +80,18 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
         /**
          * A shared state attribute containing the Endpoint URL.
          *
-         * @return The Endpoint URL shared state attribute; otherwise, it returns an empty list.
+         * @return The Endpoint URL shared state attribute.
          */
-        @Attribute(order = 100)
-        default String endpointUrl() {
-            return "";
-        }
+        @Attribute(order = 100, requiredValue = true)
+        String endpointUrl();
 
         /**
          * A shared state attribute containing the Access Token.
          *
          * @return The Access Token shared state attribute.
          */
-        @Attribute(order = 200)
-        default String accessTokenAttribute() {
-            return "";
-        }
+        @Attribute(order = 200, requiredValue = true)
+        String accessTokenAttribute();
 
         /**
          * The list of Policy attributes defined within the PingOne Authorize Trust Framework.

@@ -7,23 +7,30 @@
  */
 package org.forgerock.am.marketplace.pingoneauthorize;
 
+import static org.forgerock.json.JsonValue.json;
+import static org.forgerock.json.JsonValue.object;
+
 import java.io.IOException;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.forgerock.oauth2.core.AccessToken;
-import org.forgerock.http.HttpApplicationException;
-import org.forgerock.http.handler.HttpClientHandler;
+
+import org.forgerock.http.header.MalformedHeaderException;
+import org.forgerock.http.header.authorization.BearerToken;
+import org.forgerock.http.header.AuthorizationHeader;
 import org.forgerock.http.header.GenericHeader;
-import org.forgerock.http.protocol.Request;
+import org.forgerock.oauth2.core.AccessToken;
 import org.forgerock.http.protocol.Response;
+import org.forgerock.http.protocol.Request;
+import org.forgerock.http.protocol.Status;
+import org.forgerock.http.Handler;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
+import org.forgerock.openam.integration.pingone.PingOneWorkerException;
 import org.forgerock.services.context.RootContext;
-import org.forgerock.util.thread.listener.ShutdownManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,21 +45,14 @@ public class AuthorizeClient {
   private static final String ENVIRONMENTS_PATH = "/environments/";
   private static final String DECISION_ENDPOINTS_PATH = "/decisionEndpoints/";
 
-  private final HttpClientHandler handler;
+  private final Handler handler;
 
   /**
    * Creates a new instance that will close the underlying HTTP client upon shutdown.
    */
   @Inject
-  public AuthorizeClient(ShutdownManager shutdownManager) throws HttpApplicationException {
-    this.handler = new HttpClientHandler();
-    shutdownManager.addShutdownListener(() -> {
-      try {
-        handler.close();
-      } catch (IOException e) {
-        logger.error("Could not close HTTP client", e);
-      }
-    });
+  public AuthorizeClient(@Named("CloseableHttpClientHandler") org.forgerock.http.Handler handler) {
+    this.handler = handler;
   }
 
   /**
@@ -125,26 +125,38 @@ public class AuthorizeClient {
             "/governance-engine" );
 
     // Create the request body
-    JsonValue attributes = new JsonValue(new HashMap<String, Object>(1));
-    attributes.put("attributes", decisionData);
-
-    request.setUri(uri);
-    request.setMethod("POST");
-    request.addHeaders(new GenericHeader("Authorization", "Bearer " + accessToken));
-    request.addHeaders(new GenericHeader("Accept", "application/json"));
-    request.addHeaders(new GenericHeader("Content-Type", "application/json"));
-    request.setEntity(attributes);
+    JsonValue body = json(object(1));
+    body.put("attributes", decisionData);
 
     // Send the API request
     try {
-      logger.debug("Executing Ping Authorize Policy");
+      request = new Request().setUri(uri).setMethod("POST");
+      request.getEntity().setJson(body);
+      addAuthorizationHeader(request, accessToken);
       Response response = handler.handle(new RootContext(), request).getOrThrow();
-      return new JsonValue(response.getEntity().getJson());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new PingAuthorizeServiceException("Interrupted while sending request" + e.getMessage());
-    } catch (IOException e) {
-      throw new PingAuthorizeServiceException("Encountered exception while getting JSON response" + e.getMessage());
+      if (response.getStatus() == Status.CREATED || response.getStatus() == Status.OK) {
+        return json(response.getEntity().getJson());
+      } else {
+        throw new PingAuthorizeServiceException("PingAuthorize API response with error."
+                                         + response.getStatus()
+                                         + "-" + response.getEntity().getString());
+      }
+    } catch (MalformedHeaderException | InterruptedException | IOException e) {
+      throw new PingAuthorizeServiceException("Failed to process client authorization" + e);
     }
+  }
+
+  /**
+   * Add the Authorization header to the request.
+   *
+   * @param request The request to add the header
+   * @param accessToken The accessToken to add the header
+   * @throws MalformedHeaderException When failed to add the header
+   */
+  private void addAuthorizationHeader(Request request, String accessToken) throws MalformedHeaderException {
+    AuthorizationHeader header = new AuthorizationHeader();
+    BearerToken bearerToken = new BearerToken(accessToken);
+    header.setRawValue(BearerToken.NAME + " " + bearerToken);
+    request.addHeaders(header);
   }
 }

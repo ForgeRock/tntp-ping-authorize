@@ -111,19 +111,17 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
         /**
          * The list of Statement codes defined within the PingOne Authorize Policy.
          *
-         * @return List of Statement codes if they are provided; otherwise, it returns an empty list.
+         * @return List of Statement codes if they are provided.
          */
         @Attribute(order = 400)
-        default List<String> statementCodes() {
-            return emptyList();
-        }
+        List<String> statementCodes();
 
         /**
          * Sets the Node to render a single outcome.
          *
          * @return true if the node is set a single outcome, otherwise false.
          */
-        @Attribute(order = 500)
+        @Attribute(order = 500, requiredValue = true)
         default boolean useContinue() {
             return false;
         }
