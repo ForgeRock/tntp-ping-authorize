@@ -10,6 +10,8 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.STATEMENTCODESATTR;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.USECONTINUEATTR;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
@@ -17,10 +19,10 @@ import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import javax.security.auth.callback.Callback;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -28,10 +30,15 @@ import java.util.Optional;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.auth.node.api.Action;
 import org.forgerock.openam.auth.node.api.ExternalRequestContext;
+import org.forgerock.openam.auth.node.api.InputState;
+import org.forgerock.openam.auth.node.api.OutcomeProvider;
+import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.core.realms.Realm;
 import org.forgerock.openam.test.extensions.LoggerExtension;
+import org.forgerock.util.i18n.PreferredLocales;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -64,7 +71,7 @@ public class PingAuthorizeTest {
 
     @BeforeEach
     public void setup() throws Exception {
-        node = spy(new PingAuthorizeNode(config, client));
+        node = new PingAuthorizeNode(config, client);
     }
 
     @ParameterizedTest
@@ -109,6 +116,83 @@ public class PingAuthorizeTest {
         assertThat(result.outcome).isEqualTo(expectedOutcome);
     }
 
+    @Test
+    public void testGetInputs() {
+        List<String> attributes = new ArrayList<>();
+        attributes.add("some-attribute-value-1");
+        attributes.add("some-attribute-value-2");
+
+        given(config.attributeMap()).willReturn(attributes);
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+
+        InputState[] inputs = node.getInputs();
+
+        assertThat(inputs[0].name).isEqualTo("some-access-token");
+        assertThat(inputs[0].required).isEqualTo(true);
+
+        assertThat(inputs[1].name).isEqualTo("some-attribute-value-1");
+        assertThat(inputs[1].required).isEqualTo(false);
+
+        assertThat(inputs[2].name).isEqualTo("some-attribute-value-2");
+        assertThat(inputs[2].required).isEqualTo(false);
+    }
+
+    @Test
+    public void testGetOutputs() {
+        OutputState[] outputs = node.getOutputs();
+        assertThat(outputs[0].name).isEqualTo("decision");
+    }
+
+    @Test
+    public void testContinueGetOutcomes() throws Exception {
+        PingOneAuthorizeNode.OutcomeProvider outcomeProvider = new PingOneAuthorizeNode.OutcomeProvider();
+
+        JsonValue nodeAttributes = json(object(
+            field(USECONTINUEATTR, true)));
+
+        PreferredLocales locales = new PreferredLocales();
+        List<OutcomeProvider.Outcome> outcomes = outcomeProvider.getOutcomes(locales, nodeAttributes);
+
+        assertThat(outcomes.get(0).id).isEqualTo("continue");
+        assertThat(outcomes.get(0).displayName).isEqualTo("Continue");
+
+        assertThat(outcomes.get(1).id).isEqualTo("clientError");
+        assertThat(outcomes.get(1).displayName).isEqualTo("Error");
+    }
+
+    @Test
+    public void testWithoutContinueGetOutcomes() throws Exception {
+        PingAuthorizeNode.OutcomeProvider outcomeProvider = new PingAuthorizeNode.OutcomeProvider();
+
+        List<String> statementCodes = new ArrayList<>();
+        statementCodes.add("approved");
+        statementCodes.add("denied");
+
+        JsonValue nodeAttributes = json(object(
+            field(USECONTINUEATTR, false),
+            field(STATEMENTCODESATTR, statementCodes)));
+
+        PreferredLocales locales = new PreferredLocales();
+        List<OutcomeProvider.Outcome> outcomes = outcomeProvider.getOutcomes(locales, nodeAttributes);
+
+        assertThat(outcomes.get(0).id).isEqualTo("permit");
+        assertThat(outcomes.get(0).displayName).isEqualTo("Permit");
+
+        assertThat(outcomes.get(1).id).isEqualTo("deny");
+        assertThat(outcomes.get(1).displayName).isEqualTo("Deny");
+
+        assertThat(outcomes.get(2).id).isEqualTo("indeterminate");
+        assertThat(outcomes.get(2).displayName).isEqualTo("Indeterminate");
+
+        assertThat(outcomes.get(3).id).isEqualTo("approved");
+        assertThat(outcomes.get(3).displayName).isEqualTo("approved");
+
+        assertThat(outcomes.get(4).id).isEqualTo("denied");
+        assertThat(outcomes.get(4).displayName).isEqualTo("denied");
+
+        assertThat(outcomes.get(5).id).isEqualTo("clientError");
+        assertThat(outcomes.get(5).displayName).isEqualTo("Error");
+    }
 
     private TreeContext getContext(JsonValue sharedState, JsonValue transientState,
                                    List<? extends Callback> callbacks) {

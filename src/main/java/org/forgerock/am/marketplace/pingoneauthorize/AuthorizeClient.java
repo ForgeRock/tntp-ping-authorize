@@ -29,7 +29,6 @@ import org.forgerock.http.protocol.Status;
 import org.forgerock.http.Handler;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
-import org.forgerock.openam.integration.pingone.PingOneWorkerException;
 import org.forgerock.services.context.RootContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,26 +80,23 @@ public class AuthorizeClient {
             DECISION_ENDPOINTS_PATH + decisionEndpointID);
 
         // Create the request body
-        JsonValue parameters = new JsonValue(new LinkedHashMap<String, Object>(1));
+        JsonValue parameters = json(object(1));
         parameters.put("parameters", decisionData);
 
-        request.setUri(uri);
-        request.setMethod("POST");
-        request.addHeaders(new GenericHeader("Authorization", "Bearer " + accessToken));
-        request.addHeaders(new GenericHeader("Accept", "application/json"));
-        request.addHeaders(new GenericHeader("Content-Type", "application/json"));
-        request.setEntity(parameters);
-
-        // Send the API request
         try {
-            logger.debug("Executing DaVinci decisionEndpointID={} in environmentId={}", decisionEndpointID, worker.environmentId());
+            request = new Request().setUri(uri).setMethod("POST");
+            request.getEntity().setJson(parameters);
+            addAuthorizationHeader(request, accessToken.getTokenId());
             Response response = handler.handle(new RootContext(), request).getOrThrow();
-            return new JsonValue(response.getEntity().getJson());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new PingOneAuthorizeServiceException("Interrupted while sending request" + e.getMessage());
-        } catch (IOException e) {
-            throw new PingOneAuthorizeServiceException("Encountered exception while getting JSON response" + e.getMessage());
+            if (response.getStatus() == Status.CREATED || response.getStatus() == Status.OK) {
+                return json(response.getEntity().getJson());
+            } else {
+                throw new PingOneAuthorizeServiceException("PingOne Authorize API response with error."
+                                                        + response.getStatus()
+                                                        + "-" + response.getEntity().getString());
+            }
+        } catch (MalformedHeaderException | InterruptedException | IOException e) {
+            throw new PingOneAuthorizeServiceException("Failed to process client authorization" + e);
         }
     }
 

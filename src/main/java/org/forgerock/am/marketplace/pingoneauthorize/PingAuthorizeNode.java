@@ -12,12 +12,13 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.annotations.sm.Attribute;
 import org.forgerock.openam.auth.node.api.Action;
+import org.forgerock.openam.auth.node.api.InputState;
 import org.forgerock.openam.auth.node.api.Node;
 import org.forgerock.openam.auth.node.api.NodeProcessException;
 import org.forgerock.openam.auth.node.api.NodeState;
+import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
-import org.forgerock.openam.auth.service.marketplace.TNTPPingOneConfig;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +59,7 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
     private static final String DENY = "DENY";
     private static final String INDETERMINATE = "INDETERMINATE";
 
-    private static final String PINGAUTHORIZE = "Ping Authorize";
-    private static final String PINGONEAUTHORIZE = "PingOne Authorize";
-
     private final Config config;
-    private TNTPPingOneConfig tntpPingOneConfig;
     private final AuthorizeClient client;
 
     public int getUseContinue() {
@@ -123,7 +120,7 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
     }
 
     /**
-     * The PingOne Credentials Find Wallets node constructor.
+     * The PingAuthorize node constructor.
      *
      * @param config               the node configuration.
      * @param client               the {@link AuthorizeClient} instance.
@@ -185,6 +182,26 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             context.getStateFor(this).putTransient(loggerPrefix + "StackTrace", new Date() + ": " + stackTrace);
             return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
         }
+    }
+
+    @Override
+    public InputState[] getInputs() {
+
+        List<InputState> inputs = new ArrayList<>();
+
+        inputs.add(new InputState(config.accessTokenAttribute(), true));
+
+        config.attributeMap().forEach(
+            (v) -> inputs.add(new InputState(v, false)));
+
+        return inputs.toArray(new InputState[]{});
+    }
+
+    @Override
+    public OutputState[] getOutputs() {
+        return new OutputState[]{
+            new OutputState("decision")
+        };
     }
 
     public static class OutcomeProvider implements org.forgerock.openam.auth.node.api.OutcomeProvider {
