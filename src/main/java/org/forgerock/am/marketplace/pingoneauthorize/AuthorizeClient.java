@@ -28,7 +28,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.http.Handler;
 import org.forgerock.json.JsonValue;
-import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
 import org.forgerock.services.context.RootContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,21 +58,21 @@ public class AuthorizeClient {
      * the POST {{apiPath}}/environments/{{envID}}/decisionEndpoints/{{decisionEndpointID}} executes
      * a decision request against the decision endpoint specified by its ID in the request URL.
      *
-     * @param accessToken The {@link AccessToken}
-     * @param worker The worker {@link PingOneWorkerConfig}
-     * @param decisionEndpointID The Decision Endpoint ID
-     * @param decisionData The data for the Parameters object
+     * @param accessToken           The {@link AccessToken}
+     * @param worker                The worker {@link PingOneWorkerService}
+     * @param decisionEndpointID    The Decision Endpoint ID
+     * @param decisionData          The data for the Parameters object
      * @return Json containing the response from the operation
      * @throws PingOneAuthorizeServiceException When API response != 201
      */
     public JsonValue p1AZEvaluateDecisionRequest(
-        AccessToken accessToken,
-        PingOneWorkerConfig.Worker worker,
+        String accessToken,
+        PingOneWorkerService.Worker worker,
         String decisionEndpointID,
         JsonValue decisionData) throws PingOneAuthorizeServiceException {
 
         // Create the request url
-        Request request = new Request();
+        Request request;
 
         URI uri = URI.create(
             worker.apiUrl() +
@@ -86,7 +86,7 @@ public class AuthorizeClient {
         try {
             request = new Request().setUri(uri).setMethod("POST");
             request.getEntity().setJson(parameters);
-            addAuthorizationHeader(request, accessToken.getTokenId());
+            addAuthorizationHeader(request, accessToken);
             Response response = handler.handle(new RootContext(), request).getOrThrow();
             if (response.getStatus() == Status.CREATED || response.getStatus() == Status.OK) {
                 return json(response.getEntity().getJson());
@@ -103,9 +103,9 @@ public class AuthorizeClient {
     /**
      * the POST {{apiPath}}/governance-engine operation authorizes the client using an individual request.
      *
-     * @param pingAZEndpoint The PingAuthorize Endpoint
-     * @param accessToken The Access Token
-     * @param decisionData The data for the Attributes object
+     * @param pingAZEndpoint    The PingAuthorize Endpoint
+     * @param accessToken       The Access Token
+     * @param decisionData      The data for the Attributes object
      * @return Json containing the response from the operation
      * @throws PingAuthorizeServiceException When API response != 201
      */
@@ -115,7 +115,7 @@ public class AuthorizeClient {
         JsonValue decisionData) throws PingAuthorizeServiceException {
 
         // Create the request url
-        Request request = new Request();
+        Request request;
         URI uri = URI.create(
             pingAZEndpoint +
             "/governance-engine" );
@@ -145,8 +145,8 @@ public class AuthorizeClient {
     /**
      * Add the Authorization header to the request.
      *
-     * @param request The request to add the header
-     * @param accessToken The accessToken to add the header
+     * @param request       The request to add the header
+     * @param accessToken   The accessToken to add the header
      * @throws MalformedHeaderException When failed to add the header
      */
     private void addAuthorizationHeader(Request request, String accessToken) throws MalformedHeaderException {

@@ -20,6 +20,7 @@ import java.util.ResourceBundle;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
 import org.forgerock.oauth2.core.AccessToken;
@@ -32,9 +33,8 @@ import org.forgerock.openam.auth.node.api.NodeState;
 import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
-import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
-import org.forgerock.openam.integration.pingone.PingOneWorkerService;
-import org.forgerock.openam.integration.pingone.annotations.PingOneWorker;
+import org.forgerock.openam.integration.pingone.api.PingOneWorker;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.forgerock.openam.core.realms.Realm;
 
@@ -91,7 +91,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          */
         @Attribute(order = 100, requiredValue = true)
         @PingOneWorker
-        PingOneWorkerConfig.Worker pingOneWorker();
+        PingOneWorkerService.Worker pingOneWorker();
 
         /**
          * A shared state attribute containing the Decision Endpoint ID
@@ -159,10 +159,10 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         try {
             // Get PingOne Access Token
-            PingOneWorkerConfig.Worker worker = config.pingOneWorker();
-            AccessToken accessToken = pingOneWorkerService.getAccessToken(realm, worker);
+            PingOneWorkerService.Worker worker = config.pingOneWorker();
+            String accessToken = pingOneWorkerService.getAccessTokenId(realm, worker);
 
-            if (accessToken == null) {
+            if (StringUtils.isBlank(accessToken)) {
                 logger.error("Unable to get access token for PingOne Worker.");
                 return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
             }

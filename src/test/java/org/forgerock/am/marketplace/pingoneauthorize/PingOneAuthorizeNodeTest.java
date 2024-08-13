@@ -21,7 +21,6 @@ import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import javax.security.auth.callback.Callback;
@@ -39,9 +38,8 @@ import org.forgerock.openam.auth.node.api.OutcomeProvider;
 import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.core.realms.Realm;
-import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
-import org.forgerock.openam.integration.pingone.PingOneWorkerException;
-import org.forgerock.openam.integration.pingone.PingOneWorkerService;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerException;
 import org.forgerock.openam.test.extensions.LoggerExtension;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +70,7 @@ public class PingOneAuthorizeNodeTest {
     AccessToken accessToken;
 
     @Mock
-    PingOneWorkerConfig.Worker worker;
+    PingOneWorkerService.Worker worker;
 
     @Mock
     Realm realm;
@@ -88,10 +86,9 @@ public class PingOneAuthorizeNodeTest {
     @BeforeEach
     public void setup() throws Exception {
         given(pingOneWorkerService.getWorker(any(), anyString())).willReturn(Optional.of(worker));
+        given(pingOneWorkerService.getAccessTokenId(any(), any())).willReturn("some-access-token");
 
-        given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(accessToken);
-
-        node = spy(new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client));
+        node = new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client);
     }
 
     @Test
@@ -149,8 +146,8 @@ public class PingOneAuthorizeNodeTest {
     @Test
     public void testPingOneCommunicationFailed() throws Exception {
         // Given
-        given(pingOneWorkerService.getAccessToken(any(), any())).willReturn(null);
-        given(pingOneWorkerService.getAccessToken(realm, worker)).willThrow(new PingOneWorkerException(""));
+        given(pingOneWorkerService.getAccessTokenId(any(), any())).willReturn(null);
+        given(pingOneWorkerService.getAccessTokenId(realm, worker)).willThrow(new PingOneWorkerException(""));
         JsonValue sharedState = json(object(
                 field(USERNAME, USER),
                 field(REALM, "/realm"),
