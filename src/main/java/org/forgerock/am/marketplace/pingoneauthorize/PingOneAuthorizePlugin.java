@@ -1,6 +1,6 @@
 /*
- * This code is to be used exclusively in connection with Ping Identity Corporation software or services. 
- * Ping Identity Corporation only offers such software or services to legal entities who have entered into 
+ * This code is to be used exclusively in connection with Ping Identity Corporation software or services.
+ * Ping Identity Corporation only offers such software or services to legal entities who have entered into
  * a binding license agreement with Ping Identity Corporation.
  *
  * Copyright 2024 Ping Identity Corporation. All Rights Reserved
@@ -52,55 +52,55 @@ import static java.util.Arrays.asList;
  * @since AM 5.5.0
  */
 public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
-	protected static final String CURRENT_VERSION = "1.0.0";
-	protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
-	private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
-	private String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
+    protected static final String CURRENT_VERSION = "1.0.0";
+    protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
+    private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
+    private String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
-	/**
-	 * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
-	 *  registered at the appropriate times in plugin lifecycle.
-	 *
-	 * @return The list of node classes.
-	 */
-	@Override
-	protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
-		return new ImmutableMap.Builder<String, Iterable<? extends Class<? extends Node>>>()
-				.put("1.0.0", asList(PingOneAuthorizeNode.class,
-				                     PingAuthorizeNode.class))
-				.build();
-	}
+    /**
+     * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
+     *  registered at the appropriate times in plugin lifecycle.
+     *
+     * @return The list of node classes.
+     */
+    @Override
+    protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
+        return new ImmutableMap.Builder<String, Iterable<? extends Class<? extends Node>>>()
+            .put("1.0.0", asList(PingOneAuthorizeNode.class,
+                                 PingAuthorizeNode.class))
+            .build();
+    }
 
-	/**
-	 * The plugin version. This must be in semver (semantic version) format.
-	 *
-	 * @return The version of the plugin.
-	 * @see <a href="https://www.osgi.org/wp-content/uploads/SemanticVersioning.pdf">Semantic Versioning</a>
-	 */
-	@Override
-	public String getPluginVersion() {
-		return PingOneAuthorizePlugin.CURRENT_VERSION;
-	}
+    /**
+     * The plugin version. This must be in semver (semantic version) format.
+     *
+     * @return The version of the plugin.
+     * @see <a href="https://www.osgi.org/wp-content/uploads/SemanticVersioning.pdf">Semantic Versioning</a>
+     */
+    @Override
+    public String getPluginVersion() {
+        return PingOneAuthorizePlugin.CURRENT_VERSION;
+    }
 
-	/**
-	 * This method will be called when the version returned by {@link #getPluginVersion()} is higher than the
-	 * version already installed. This method will be called before the {@link #onStartup()} method.
-	 *
-	 * No need to implement this untils there are multiple versions of your auth node.
-	 *
-	 * @param fromVersion The old version of the plugin that has been installed.
-	 */
-	@Override
-	public void upgrade(String fromVersion) throws PluginException {
-		logger.debug("{} fromVersion = {}", LOGGER_PREFIX, fromVersion);
-		logger.debug("{} currentVersion = {}", LOGGER_PREFIX, CURRENT_VERSION);
+    /**
+     * This method will be called when the version returned by {@link #getPluginVersion()} is higher than the
+     * version already installed. This method will be called before the {@link #onStartup()} method.
+     *
+     * No need to implement this untils there are multiple versions of your auth node.
+     *
+     * @param fromVersion The old version of the plugin that has been installed.
+     */
+    @Override
+    public void upgrade(String fromVersion) throws PluginException {
+        logger.debug("{} fromVersion = {}", LOGGER_PREFIX, fromVersion);
+        logger.debug("{} currentVersion = {}", LOGGER_PREFIX, CURRENT_VERSION);
 
-		try {
-			pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
-			pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
-		} catch (Exception e) {
-			throw new PluginException(e.getMessage());
-		}
-		super.upgrade(fromVersion);
-	}
+        try {
+            pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
+            pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
+        } catch (Exception e) {
+            throw new PluginException(e.getMessage());
+        }
+        super.upgrade(fromVersion);
+    }
 }

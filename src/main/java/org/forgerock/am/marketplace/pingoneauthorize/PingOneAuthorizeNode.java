@@ -7,7 +7,6 @@
  */
 package org.forgerock.am.marketplace.pingoneauthorize;
 
-import static java.util.Collections.emptyList;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.DENY_OUTCOME_ID;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.INDETERMINATE_OUTCOME_ID;
@@ -21,19 +20,21 @@ import java.util.ResourceBundle;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
 import org.forgerock.oauth2.core.AccessToken;
 import org.forgerock.openam.annotations.sm.Attribute;
 import org.forgerock.openam.auth.node.api.Action;
+import org.forgerock.openam.auth.node.api.InputState;
 import org.forgerock.openam.auth.node.api.Node;
 import org.forgerock.openam.auth.node.api.NodeProcessException;
 import org.forgerock.openam.auth.node.api.NodeState;
+import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
-import org.forgerock.openam.integration.pingone.PingOneWorkerConfig;
-import org.forgerock.openam.integration.pingone.PingOneWorkerService;
-import org.forgerock.openam.integration.pingone.annotations.PingOneWorker;
+import org.forgerock.openam.integration.pingone.api.PingOneWorker;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.forgerock.openam.core.realms.Realm;
 
@@ -58,8 +59,8 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private static final String BUNDLE = PingOneAuthorizeNode.class.getName();
 
     // Attribute keys
-    private static final String STATEMENTCODESATTR = "statementCodes";
-    private static final String USECONTINUEATTR = "useContinue";
+    public static final String STATEMENTCODESATTR = "statementCodes";
+    public static final String USECONTINUEATTR = "useContinue";
     private static final String STATEMENT_KEY = "statements";
 
     // Outcomes
@@ -90,7 +91,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          */
         @Attribute(order = 100, requiredValue = true)
         @PingOneWorker
-        PingOneWorkerConfig.Worker pingOneWorker();
+        PingOneWorkerService.Worker pingOneWorker();
 
         /**
          * A shared state attribute containing the Decision Endpoint ID
@@ -128,7 +129,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     }
 
     /**
-     * The PingOne Credentials Find Wallets node constructor.
+     * The PingOne Authorize node constructor.
      *
      * @param config               the node configuration.
      * @param realm                the realm.
@@ -145,7 +146,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     }
 
     @Override
-    public Action process(TreeContext context) throws NodeProcessException {
+    public Action process(TreeContext context) {
         // Create the flow input based on the node state
         NodeState nodeState = context.getStateFor(this);
 
@@ -158,10 +159,10 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         try {
             // Get PingOne Access Token
-            PingOneWorkerConfig.Worker worker = config.pingOneWorker();
-            AccessToken accessToken = pingOneWorkerService.getAccessToken(realm, worker);
+            PingOneWorkerService.Worker worker = config.pingOneWorker();
+            String accessToken = pingOneWorkerService.getAccessTokenId(realm, worker);
 
-            if (accessToken == null) {
+            if (StringUtils.isBlank(accessToken)) {
                 logger.error("Unable to get access token for PingOne Worker.");
                 return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
             }
@@ -203,6 +204,24 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
             context.getStateFor(this).putTransient(LOGGER_PREFIX + "StackTrace", new Date() + ": " + stackTrace);
             return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
         }
+    }
+
+    @Override
+    public InputState[] getInputs() {
+
+        List<InputState> inputs = new ArrayList<>();
+
+        config.attributeMap().forEach(
+            (v) -> inputs.add(new InputState(v, false)));
+
+        return inputs.toArray(new InputState[]{});
+    }
+
+    @Override
+    public OutputState[] getOutputs() {
+        return new OutputState[]{
+            new OutputState("decision")
+        };
     }
 
     public static class OutcomeProvider implements org.forgerock.openam.auth.node.api.OutcomeProvider {
