@@ -117,7 +117,7 @@ public class PingOneAuthorizeNodeTest {
                 field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
 
         given(config.decisionEndpointID()).willReturn("some-endpoint-id");
-        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
         given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
 
@@ -168,7 +168,7 @@ public class PingOneAuthorizeNodeTest {
         attributes.add("some-attribute-value-1");
         attributes.add("some-attribute-value-2");
 
-        given(config.attributeMap()).willReturn(attributes);
+        given(config.attributeList()).willReturn(attributes);
 
         InputState[] inputs = node.getInputs();
 

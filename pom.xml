@@ -21,8 +21,8 @@
 
     <properties>
         <am.version>7.6.0-SNAPSHOT</am.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <forgerockDistMgmtReleasesUrl>https://maven.forgerock.org/artifactory/internal-releases</forgerockDistMgmtReleasesUrl>
     </properties>
@@ -73,16 +73,6 @@
         </dependency>
         <dependency>
             <groupId>org.forgerock.am</groupId>
-            <artifactId>openam-guice-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
-            <artifactId>openam-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
             <artifactId>identity-api</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -94,17 +84,6 @@
         <dependency>
             <groupId>org.forgerock.am</groupId>
             <artifactId>pingone-api</artifactId>
-            <version>7.6.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
-            <artifactId>openam-oauth2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
-            <artifactId>auth-nodes</artifactId>
-            <version>${am.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -149,12 +128,8 @@
         </dependency>
         <dependency>
             <groupId>org.forgerock.am</groupId>
-            <artifactId>scripting-api</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
             <artifactId>openam-test-utils</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.forgerock.openam.auth.service.marketplace</groupId>

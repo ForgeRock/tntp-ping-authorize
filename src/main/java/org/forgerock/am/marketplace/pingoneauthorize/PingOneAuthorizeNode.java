@@ -14,7 +14,6 @@ import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -23,7 +22,6 @@ import javax.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
-import org.forgerock.oauth2.core.AccessToken;
 import org.forgerock.openam.annotations.sm.Attribute;
 import org.forgerock.openam.auth.node.api.Action;
 import org.forgerock.openam.auth.node.api.InputState;
@@ -39,7 +37,6 @@ import org.forgerock.util.i18n.PreferredLocales;
 import org.forgerock.openam.core.realms.Realm;
 
 import com.google.inject.assistedinject.Assisted;
-import com.sun.identity.sm.RequiredValueValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,14 +69,6 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private final PingOneWorkerService pingOneWorkerService;
     private final AuthorizeClient client;
 
-    public int getUseContinue() {
-        if(config.useContinue()) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
-
     /**
      * Configuration for the node.
      */
@@ -98,7 +87,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          *
          * @return The Decision Endpoint ID shared state attribute.
          */
-        @Attribute(order = 200, validators = {RequiredValueValidator.class})
+        @Attribute(order = 200, requiredValue = true)
         String decisionEndpointID();
 
         /**
@@ -107,7 +96,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          * @return List of Policy attributes as a List of Strings.
          */
         @Attribute(order = 300)
-        List<String> attributeMap();
+        List<String> attributeList();
 
         /**
          * The list of Statement codes defined within the PingOne Authorize Policy.
@@ -152,8 +141,8 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         // Loops through the string list `attributeMap`
         // Places the key (from attributeMap) and value (from nodeState) into the `retrievedAttributes` HashMap.
-        JsonValue parameters = new JsonValue(new HashMap<String, String>(1));
-        for (String key : config.attributeMap()) {
+        JsonValue parameters = JsonValue.json(JsonValue.object());
+        for (String key : config.attributeList()) {
             parameters.put(key, nodeState.get(key));;
         }
 
@@ -211,7 +200,7 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         List<InputState> inputs = new ArrayList<>();
 
-        config.attributeMap().forEach(
+        config.attributeList().forEach(
             (v) -> inputs.add(new InputState(v, false)));
 
         return inputs.toArray(new InputState[]{});
@@ -240,10 +229,10 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
             ArrayList<Outcome> outcomes = new ArrayList<>();
 
             // Retrieves the current state of the continue button
-            String useContinue = nodeAttributes.get(USECONTINUEATTR).toString();
+            boolean useContinue = nodeAttributes.get(USECONTINUEATTR).defaultTo(false).asBoolean();;
 
             // Do not render other outcomes if button = "true"
-            if (useContinue.contains("true")) {
+            if (useContinue) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
                 outcomes.add(new Outcome(PERMIT_OUTCOME_ID, bundle.getString(PERMIT_OUTCOME_ID)));

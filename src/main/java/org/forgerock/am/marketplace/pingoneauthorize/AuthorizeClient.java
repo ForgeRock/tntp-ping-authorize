@@ -152,7 +152,7 @@ public class AuthorizeClient {
     private void addAuthorizationHeader(Request request, String accessToken) throws MalformedHeaderException {
         AuthorizationHeader header = new AuthorizationHeader();
         BearerToken bearerToken = new BearerToken(accessToken);
-        header.setRawValue(BearerToken.NAME + " " + bearerToken);
+        header.setRawValue(BearerToken.NAME + " " + bearerToken.getToken());
         request.addHeaders(header);
     }
 }
