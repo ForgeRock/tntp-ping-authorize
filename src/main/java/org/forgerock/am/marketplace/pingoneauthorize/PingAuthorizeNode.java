@@ -31,10 +31,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 import static java.util.Collections.emptyList;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.DENY_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.INDETERMINATE_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.PERMIT_OUTCOME_ID;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.*;
 
 /**
  * The PingAuthorize node lets administrators integrate PingAuthorize functionality in a Journey.
@@ -61,14 +58,6 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
 
     private final Config config;
     private final AuthorizeClient client;
-
-    public int getUseContinue() {
-        if(config.useContinue()) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
 
     /**
      * Configuration for the node.
@@ -158,7 +147,11 @@ public class PingAuthorizeNode extends SingleOutcomeNode {
             // Retrieves the "code" value from the "statements" object inside the API response body
             String statementCode = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
-            if (config.statementCodes().contains(statementCode)) {
+            // Retrieves the current state of the continue button
+            if(config.useContinue()) {
+                return Action.goTo(CONTINUE_OUTCOME_ID).build();
+            }
+            else if (config.statementCodes().contains(statementCode)) {
                 return Action.goTo(statementCode).build();
             }
 

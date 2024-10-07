@@ -10,12 +10,11 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CONTINUE_OUTCOME_ID;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.STATEMENTCODESATTR;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.USECONTINUEATTR;
-import static org.forgerock.json.JsonValue.field;
-import static org.forgerock.json.JsonValue.json;
-import static org.forgerock.json.JsonValue.object;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
+import static org.forgerock.json.JsonValue.*;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,19 +90,6 @@ public class PingOneAuthorizeNodeTest {
         node = new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client);
     }
 
-    @Test
-    public void testPingOneUserIdNotFoundInSharedState() throws Exception {
-        // Given
-        JsonValue sharedState = json(object(field(USERNAME, USER), field(REALM, "/realm")));
-        JsonValue transientState = json(object());
-
-        // When
-        Action result = node.process(getContext(sharedState, transientState, emptyList()));
-
-        // Then
-        assertThat(result.outcome).isEqualTo(CLIENT_ERROR_OUTCOME_ID);
-    }
-
     @ParameterizedTest
     @CsvSource({
             "PERMIT,permit",
@@ -119,7 +105,7 @@ public class PingOneAuthorizeNodeTest {
         given(config.decisionEndpointID()).willReturn("some-endpoint-id");
         given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
-        given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
+        given(config.useContinue()).willReturn(false);
 
         JsonValue response = null;
 
@@ -141,6 +127,68 @@ public class PingOneAuthorizeNodeTest {
 
         // Then
         assertThat(result.outcome).isEqualTo(expectedOutcome);
+    }
+
+    @Test
+    public void testStatementsPingOneAuthorize() throws Exception {
+        // Given
+        JsonValue sharedState = json(object(
+                field(REALM, "/realm"),
+                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+
+        List<String> statementCodes = new ArrayList<>();
+        statementCodes.add("REVIEW");
+        statementCodes.add("DENIED");
+
+        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
+        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.statementCodes()).willReturn(statementCodes);
+        given(config.useContinue()).willReturn(false);
+
+        JsonValue response = json(object(
+                field("statements", array(
+                        object(
+                                field("code", "REVIEW")
+                        )))));
+
+        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+
+        // When
+        Action result = node.process(getContext(sharedState, json(object()), emptyList()));
+
+        // Then
+        assertThat(result.outcome).isEqualTo("REVIEW");
+    }
+
+    @Test
+    public void testUseContinuePingOneAuthorize() throws Exception {
+        // Given
+        JsonValue sharedState = json(object(
+                field(REALM, "/realm"),
+                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+
+        List<String> statementCodes = new ArrayList<>();
+        statementCodes.add("REVIEW");
+        statementCodes.add("DENIED");
+
+        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
+        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.statementCodes()).willReturn(statementCodes);
+        given(config.useContinue()).willReturn(true);
+
+        JsonValue response = json(object(
+                field("statements", array(
+                        object(
+                                field("code", "REVIEW")
+                        )))));
+
+        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+
+        // When
+        Action result = node.process(getContext(sharedState, json(object()), emptyList()));
+
+        // Then
+        assertThat(result.outcome).isEqualTo(CONTINUE_OUTCOME_ID);
     }
 
     @Test

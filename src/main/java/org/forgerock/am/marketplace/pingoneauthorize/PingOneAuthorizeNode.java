@@ -7,11 +7,6 @@
  */
 package org.forgerock.am.marketplace.pingoneauthorize;
 
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.DENY_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.INDETERMINATE_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.PERMIT_OUTCOME_ID;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +34,8 @@ import org.forgerock.openam.core.realms.Realm;
 import com.google.inject.assistedinject.Assisted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.*;
 
 /**
  * The PingOne Authorize node lets administrators integrate PingOne Authorize functionality in a journey.
@@ -169,7 +166,11 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
             // Retrieves the "code" value from the "statements" object inside the API response body
             String statement = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
-            if (config.statementCodes().contains(statement)) {
+            // Retrieves the current state of the continue button
+            if(config.useContinue()) {
+                return Action.goTo(CONTINUE_OUTCOME_ID).build();
+            }
+            else if (config.statementCodes().contains(statement)) {
                 return Action.goTo(statement).build();
             }
 

@@ -10,14 +10,15 @@ package org.forgerock.am.marketplace.pingoneauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
+import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CONTINUE_OUTCOME_ID;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.STATEMENTCODESATTR;
 import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.USECONTINUEATTR;
-import static org.forgerock.json.JsonValue.field;
-import static org.forgerock.json.JsonValue.json;
-import static org.forgerock.json.JsonValue.object;
+import static org.forgerock.json.JsonValue.*;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +36,7 @@ import org.forgerock.openam.auth.node.api.OutcomeProvider;
 import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.core.realms.Realm;
+import org.forgerock.openam.integration.pingone.api.PingOneWorkerException;
 import org.forgerock.openam.test.extensions.LoggerExtension;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,6 +116,74 @@ public class PingAuthorizeTest {
 
         // Then
         assertThat(result.outcome).isEqualTo(expectedOutcome);
+    }
+
+    @Test
+    public void testStatementsPingOneAuthorize() throws Exception {
+        // Given
+        JsonValue sharedState = json(object(
+                field(REALM, "/realm"),
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+        ));
+
+        List<String> statementCodes = new ArrayList<>();
+        statementCodes.add("REVIEW");
+        statementCodes.add("DENIED");
+
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.statementCodes()).willReturn(statementCodes);
+        given(config.useContinue()).willReturn(false);
+
+        JsonValue response = json(object(
+                field("statements", array(
+                        object(
+                                field("code", "REVIEW")
+                        )))));
+
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
+
+        // When
+        Action result = node.process(getContext(sharedState, json(object()), emptyList()));
+
+        // Then
+        assertThat(result.outcome).isEqualTo("REVIEW");
+    }
+
+    @Test
+    public void testUseContinuePingOneAuthorize() throws Exception {
+        // Given
+        JsonValue sharedState = json(object(
+                field(REALM, "/realm"),
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+        ));
+
+        List<String> statementCodes = new ArrayList<>();
+        statementCodes.add("REVIEW");
+        statementCodes.add("DENIED");
+
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.statementCodes()).willReturn(statementCodes);
+        given(config.useContinue()).willReturn(true);
+
+        JsonValue response = json(object(
+                field("statements", array(
+                        object(
+                                field("code", "REVIEW")
+                        )))));
+
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
+
+        // When
+        Action result = node.process(getContext(sharedState, json(object()), emptyList()));
+
+        // Then
+        assertThat(result.outcome).isEqualTo(CONTINUE_OUTCOME_ID);
     }
 
     @Test
