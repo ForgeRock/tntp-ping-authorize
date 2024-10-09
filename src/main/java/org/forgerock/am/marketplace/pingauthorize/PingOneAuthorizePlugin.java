@@ -6,10 +6,8 @@
  * Copyright 2024 Ping Identity Corporation. All Rights Reserved
  */
 
-package org.forgerock.am.marketplace.pingoneauthorize;
+package org.forgerock.am.marketplace.pingauthorize;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -55,7 +53,7 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
     protected static final String CURRENT_VERSION = "1.0.0";
     protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
     private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
-    private String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
+    private static final String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
     /**
      * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
@@ -66,8 +64,7 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
     @Override
     protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
         return new ImmutableMap.Builder<String, Iterable<? extends Class<? extends Node>>>()
-            .put("1.0.0", asList(PingOneAuthorizeNode.class,
-                                 PingAuthorizeNode.class))
+            .put("1.0.0", asList(PingAuthorizeNode.class))
             .build();
     }
 
@@ -96,7 +93,6 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
         logger.debug("{} currentVersion = {}", LOGGER_PREFIX, CURRENT_VERSION);
 
         try {
-            pluginTools.upgradeAuthNode(PingOneAuthorizeNode.class);
             pluginTools.upgradeAuthNode(PingAuthorizeNode.class);
         } catch (Exception e) {
             throw new PluginException(e.getMessage());

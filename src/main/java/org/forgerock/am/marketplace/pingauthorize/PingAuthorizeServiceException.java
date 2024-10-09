@@ -1,4 +1,4 @@
-package org.forgerock.am.marketplace.pingoneauthorize;
+package org.forgerock.am.marketplace.pingauthorize;
 
 /**
  * PingAuthorize Exception.

@@ -12,12 +12,12 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>TNTPPingOneAuthorize</artifactId>
+    <artifactId>TNTPPingAuthorize</artifactId>
 
     <groupId>org.forgerock.am.marketplace</groupId>
     <version>1.0.0</version>
-    <name>PingOneAuthorize</name>
-    <description>PingOneAuthorize and PingAuthorize Integration</description>
+    <name>PingAuthorize</name>
+    <description>PingAuthorize Integration</description>
 
     <properties>
         <am.version>7.6.0-SNAPSHOT</am.version>
@@ -77,16 +77,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.forgerock.am</groupId>
-            <artifactId>service-config-api</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.am</groupId>
-            <artifactId>pingone-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>
@@ -130,11 +120,6 @@
             <groupId>org.forgerock.am</groupId>
             <artifactId>openam-test-utils</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.forgerock.openam.auth.service.marketplace</groupId>
-            <artifactId>TNTPPingOneService</artifactId>
-            <version>0.0.20</version>
         </dependency>
     </dependencies>
 

@@ -5,16 +5,9 @@
  *
  * Copyright 2024 Ping Identity Corporation. All Rights Reserved
  */
-package org.forgerock.am.marketplace.pingoneauthorize;
+package org.forgerock.am.marketplace.pingauthorize;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.ResourceBundle;
-
-import javax.inject.Inject;
-
-import org.apache.commons.lang.StringUtils;
+import com.google.inject.assistedinject.Assisted;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.annotations.sm.Attribute;
@@ -26,36 +19,37 @@ import org.forgerock.openam.auth.node.api.NodeState;
 import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.SingleOutcomeNode;
 import org.forgerock.openam.auth.node.api.TreeContext;
-import org.forgerock.openam.integration.pingone.api.PingOneWorker;
-import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
 import org.forgerock.util.i18n.PreferredLocales;
-import org.forgerock.openam.core.realms.Realm;
-
-import com.google.inject.assistedinject.Assisted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.*;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import static java.util.Collections.emptyList;
+import static org.forgerock.am.marketplace.pingauthorize.PingAuthorizeNode.OutcomeProvider.*;
 
 /**
- * The PingOne Authorize node lets administrators integrate PingOne Authorize functionality in a journey.
+ * The PingAuthorize node lets administrators integrate PingAuthorize functionality in a Journey.
  */
-@Node.Metadata(outcomeProvider = PingOneAuthorizeNode.OutcomeProvider.class,
-               configClass = PingOneAuthorizeNode.Config.class,
+@Node.Metadata(outcomeProvider = PingAuthorizeNode.OutcomeProvider.class,
+               configClass = PingAuthorizeNode.Config.class,
                tags = {"marketplace", "trustnetwork"})
-public class PingOneAuthorizeNode extends SingleOutcomeNode {
+public class PingAuthorizeNode extends SingleOutcomeNode {
 
-    private final Realm realm;
+    private static final Logger logger = LoggerFactory.getLogger(PingAuthorizeNode.class);
+    private final String loggerPrefix = "[PingAuthorizeNode]" + PingOneAuthorizePlugin.LOG_APPENDER;
 
-    private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizeNode.class);
-    private static final String LOGGER_PREFIX = "[PingOneAuthorizeNode]" + PingOneAuthorizePlugin.LOG_APPENDER;
-
-    private static final String BUNDLE = PingOneAuthorizeNode.class.getName();
+    private static final String BUNDLE = PingAuthorizeNode.class.getName();
 
     // Attribute keys
     public static final String STATEMENTCODESATTR = "statementCodes";
     public static final String USECONTINUEATTR = "useContinue";
-    private static final String STATEMENT_KEY = "statements";
+    public static final String STATEMENT_KEY = "statements";
 
     // Outcomes
     private static final String PERMIT = "PERMIT";
@@ -63,29 +57,27 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
     private static final String INDETERMINATE = "INDETERMINATE";
 
     private final Config config;
-    private final PingOneWorkerService pingOneWorkerService;
-    private final AuthorizeClient client;
+    private final PingAuthorizeService client;
 
     /**
      * Configuration for the node.
      */
     public interface Config {
         /**
-         * Reference to the PingOne Worker App.
+         * A shared state attribute containing the Endpoint URL.
          *
-         * @return The PingOne Worker App.
+         * @return The Endpoint URL shared state attribute.
          */
         @Attribute(order = 100, requiredValue = true)
-        @PingOneWorker
-        PingOneWorkerService.Worker pingOneWorker();
+        String endpointUrl();
 
         /**
-         * A shared state attribute containing the Decision Endpoint ID
+         * A shared state attribute containing the Access Token.
          *
-         * @return The Decision Endpoint ID shared state attribute.
+         * @return The Access Token shared state attribute.
          */
         @Attribute(order = 200, requiredValue = true)
-        String decisionEndpointID();
+        String accessTokenAttribute();
 
         /**
          * The list of Policy attributes defined within the PingOne Authorize Trust Framework.
@@ -93,85 +85,74 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
          * @return List of Policy attributes as a List of Strings.
          */
         @Attribute(order = 300)
-        List<String> attributeList();
+        List<String> attributeMap();
 
         /**
          * The list of Statement codes defined within the PingOne Authorize Policy.
          *
-         * @return List of Statement codes if they are provided.
+         * @return List of Statement codes if they are provided; otherwise, it returns an empty list.
          */
         @Attribute(order = 400)
-        List<String> statementCodes();
+        default List<String> statementCodes() {
+            return emptyList();
+        }
 
         /**
          * Sets the Node to render a single outcome.
          *
          * @return true if the node is set a single outcome, otherwise false.
          */
-        @Attribute(order = 500, requiredValue = true)
+        @Attribute(order = 500)
         default boolean useContinue() {
             return false;
         }
     }
 
     /**
-     * The PingOne Authorize node constructor.
+     * The PingAuthorize node constructor.
      *
      * @param config               the node configuration.
-     * @param realm                the realm.
-     * @param pingOneWorkerService the {@link PingOneWorkerService} instance.
-     * @param client               the {@link AuthorizeClient} instance.
+     * @param client               the {@link PingAuthorizeService} instance.
      */
     @Inject
-    public PingOneAuthorizeNode(@Assisted Config config, @Assisted Realm realm,
-                                PingOneWorkerService pingOneWorkerService, AuthorizeClient client) {
+    public PingAuthorizeNode(@Assisted Config config, PingAuthorizeService client) {
         this.config = config;
-        this.realm = realm;
         this.client = client;
-        this.pingOneWorkerService = pingOneWorkerService;
     }
 
     @Override
     public Action process(TreeContext context) {
-        // Create the flow input based on the node state
+        // create the flow input based on the node state
         NodeState nodeState = context.getStateFor(this);
+
+        String accessToken = nodeState.get(config.accessTokenAttribute()).asString();
 
         // Loops through the string list `attributeMap`
         // Places the key (from attributeMap) and value (from nodeState) into the `retrievedAttributes` HashMap.
-        JsonValue parameters = JsonValue.json(JsonValue.object());
-        for (String key : config.attributeList()) {
+        JsonValue parameters = new JsonValue(new HashMap<String, String>(1));
+        for (String key : config.attributeMap()) {
             parameters.put(key, nodeState.get(key));;
         }
 
         try {
-            // Get PingOne Access Token
-            PingOneWorkerService.Worker worker = config.pingOneWorker();
-            String accessToken = pingOneWorkerService.getAccessTokenId(realm, worker);
-
-            if (StringUtils.isBlank(accessToken)) {
-                logger.error("Unable to get access token for PingOne Worker.");
-                return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
-            }
-
             // Create and send API call
-            JsonValue response = client.p1AZEvaluateDecisionRequest(
+            JsonValue response = client.pingAZEvaluateDecisionRequest(
+                    config.endpointUrl(),
                     accessToken,
-                    worker,
-                    config.decisionEndpointID(),
                     parameters);
 
             // Retrieve API response
             nodeState.putTransient("decision", response);
 
             // Retrieves the "code" value from the "statements" object inside the API response body
-            String statement = response.get(STATEMENT_KEY).get(0).get("code").asString();
+            String statementCode = response.get(STATEMENT_KEY).get(0).get("code").asString();
 
             // Retrieves the current state of the continue button
             if(config.useContinue()) {
                 return Action.goTo(CONTINUE_OUTCOME_ID).build();
             }
-            else if (config.statementCodes().contains(statement)) {
-                return Action.goTo(statement).build();
+            else if (config.statementCodes().contains(statementCode)) {
+                return Action.goTo(statementCode).build();
             }
 
             // The API response's "decision" value will determine which outcome is executed
@@ -189,9 +170,9 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         } catch (Exception ex) {
             String stackTrace = ExceptionUtils.getStackTrace(ex);
-            logger.error(LOGGER_PREFIX + "Exception occurred: ", ex);
-            context.getStateFor(this).putTransient(LOGGER_PREFIX + "Exception", new Date() + ": " + ex.getMessage());
-            context.getStateFor(this).putTransient(LOGGER_PREFIX + "StackTrace", new Date() + ": " + stackTrace);
+            logger.error(loggerPrefix + "Exception occurred: ", ex);
+            context.getStateFor(this).putTransient(loggerPrefix + "Exception", new Date() + ": " + ex.getMessage());
+            context.getStateFor(this).putTransient(loggerPrefix + "StackTrace", new Date() + ": " + stackTrace);
             return Action.goTo(CLIENT_ERROR_OUTCOME_ID).build();
         }
     }
@@ -201,7 +182,9 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
 
         List<InputState> inputs = new ArrayList<>();
 
-        config.attributeList().forEach(
+        inputs.add(new InputState(config.accessTokenAttribute(), true));
+
+        config.attributeMap().forEach(
             (v) -> inputs.add(new InputState(v, false)));
 
         return inputs.toArray(new InputState[]{});
@@ -225,15 +208,15 @@ public class PingOneAuthorizeNode extends SingleOutcomeNode {
         @Override
         public List<Outcome> getOutcomes(PreferredLocales locales, JsonValue nodeAttributes) throws NodeProcessException {
 
-            ResourceBundle bundle = locales.getBundleInPreferredLocale(BUNDLE, PingOneAuthorizeNode.OutcomeProvider.class.getClassLoader());
+            ResourceBundle bundle = locales.getBundleInPreferredLocale(BUNDLE, PingAuthorizeNode.OutcomeProvider.class.getClassLoader());
 
             ArrayList<Outcome> outcomes = new ArrayList<>();
 
             // Retrieves the current state of the continue button
-            boolean useContinue = nodeAttributes.get(USECONTINUEATTR).defaultTo(false).asBoolean();;
+            String useContinue = nodeAttributes.get(USECONTINUEATTR).toString();
 
             // Do not render other outcomes if button = "true"
-            if (useContinue) {
+            if (useContinue.contains("true")) {
                 outcomes.add(new Outcome(CONTINUE_OUTCOME_ID, bundle.getString(CONTINUE_OUTCOME_ID)));
             } else {
                 outcomes.add(new Outcome(PERMIT_OUTCOME_ID, bundle.getString(PERMIT_OUTCOME_ID)));

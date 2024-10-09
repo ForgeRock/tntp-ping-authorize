@@ -6,19 +6,18 @@
  * to such license between the licensee and ForgeRock AS.
  */
 
-package org.forgerock.am.marketplace.pingoneauthorize;
+package org.forgerock.am.marketplace.pingauthorize;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CONTINUE_OUTCOME_ID;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.STATEMENTCODESATTR;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.USECONTINUEATTR;
-import static org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizeNode.OutcomeProvider.CLIENT_ERROR_OUTCOME_ID;
+import static org.forgerock.am.marketplace.pingauthorize.PingAuthorizeNode.OutcomeProvider.CONTINUE_OUTCOME_ID;
+
+import static org.forgerock.am.marketplace.pingauthorize.PingAuthorizeNode.STATEMENTCODESATTR;
+import static org.forgerock.am.marketplace.pingauthorize.PingAuthorizeNode.USECONTINUEATTR;
 import static org.forgerock.json.JsonValue.*;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.REALM;
 import static org.forgerock.openam.auth.node.api.SharedStateConstants.USERNAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
 
@@ -29,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.forgerock.json.JsonValue;
-import org.forgerock.oauth2.core.AccessToken;
 import org.forgerock.openam.auth.node.api.Action;
 import org.forgerock.openam.auth.node.api.ExternalRequestContext;
 import org.forgerock.openam.auth.node.api.InputState;
@@ -37,8 +35,6 @@ import org.forgerock.openam.auth.node.api.OutcomeProvider;
 import org.forgerock.openam.auth.node.api.OutputState;
 import org.forgerock.openam.auth.node.api.TreeContext;
 import org.forgerock.openam.core.realms.Realm;
-import org.forgerock.openam.integration.pingone.api.PingOneWorkerService;
-import org.forgerock.openam.integration.pingone.api.PingOneWorkerException;
 import org.forgerock.openam.test.extensions.LoggerExtension;
 import org.forgerock.util.i18n.PreferredLocales;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,40 +50,28 @@ import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-public class PingOneAuthorizeNodeTest {
+public class PingAuthorizeTest {
 
     @RegisterExtension
-    public LoggerExtension loggerExtension = new LoggerExtension(PingOneAuthorizeNode.class);
+    public LoggerExtension loggerExtension = new LoggerExtension(PingAuthorizeNode.class);
 
     @Mock
-    PingOneAuthorizeNode.Config config;
-
-    @Mock
-    PingOneWorkerService pingOneWorkerService;
-
-    @Mock
-    AccessToken accessToken;
-
-    @Mock
-    PingOneWorkerService.Worker worker;
+    PingAuthorizeNode.Config config;
 
     @Mock
     Realm realm;
 
     @Mock
-    AuthorizeClient client;
+    PingAuthorizeService client;
 
-    PingOneAuthorizeNode node;
+    PingAuthorizeNode node;
 
     private static final String USER = "testUser";
     public static final String PINGONE_AUTHORIZE_ATTRIBUTE = "some-attribute-key";
 
     @BeforeEach
     public void setup() throws Exception {
-        given(pingOneWorkerService.getWorker(any(), anyString())).willReturn(Optional.of(worker));
-        given(pingOneWorkerService.getAccessTokenId(any(), any())).willReturn("some-access-token");
-
-        node = new PingOneAuthorizeNode(config, realm, pingOneWorkerService, client);
+        node = new PingAuthorizeNode(config, client);
     }
 
     @ParameterizedTest
@@ -96,16 +80,19 @@ public class PingOneAuthorizeNodeTest {
             "DENY,deny",
             "INDETERMINATE,indeterminate",
     })
-    public void testReturnOutcomePingOneAuthorize(String decision, String expectedOutcome) throws Exception {
+    public void testReturnOutcomePingAuthorize(String decision, String expectedOutcome) throws Exception {
         // Given
         JsonValue sharedState = json(object(
                 field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+                ));
 
-        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
-        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(Collections.singletonList("some-statement-codes"));
-        given(config.useContinue()).willReturn(false);
+        given(config.useContinue()).willReturn(Boolean.valueOf("some-boolean-value"));
 
         JsonValue response = null;
 
@@ -120,7 +107,7 @@ public class PingOneAuthorizeNodeTest {
                     field("decision", decision)));
         }
 
-        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
 
         // When
         Action result = node.process(getContext(sharedState, json(object()), emptyList()));
@@ -134,14 +121,17 @@ public class PingOneAuthorizeNodeTest {
         // Given
         JsonValue sharedState = json(object(
                 field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+        ));
 
         List<String> statementCodes = new ArrayList<>();
         statementCodes.add("REVIEW");
         statementCodes.add("DENIED");
 
-        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
-        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(statementCodes);
         given(config.useContinue()).willReturn(false);
 
@@ -151,7 +141,7 @@ public class PingOneAuthorizeNodeTest {
                                 field("code", "REVIEW")
                         )))));
 
-        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
 
         // When
         Action result = node.process(getContext(sharedState, json(object()), emptyList()));
@@ -165,14 +155,17 @@ public class PingOneAuthorizeNodeTest {
         // Given
         JsonValue sharedState = json(object(
                 field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")));
+                field(USERNAME, USER),
+                field("some-access-token", "access-token-123")
+        ));
 
         List<String> statementCodes = new ArrayList<>();
         statementCodes.add("REVIEW");
         statementCodes.add("DENIED");
 
-        given(config.decisionEndpointID()).willReturn("some-endpoint-id");
-        given(config.attributeList()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
+        given(config.endpointUrl()).willReturn("some-endpoint-url");
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
+        given(config.attributeMap()).willReturn(Collections.singletonList(PINGONE_AUTHORIZE_ATTRIBUTE));
         given(config.statementCodes()).willReturn(statementCodes);
         given(config.useContinue()).willReturn(true);
 
@@ -182,7 +175,7 @@ public class PingOneAuthorizeNodeTest {
                                 field("code", "REVIEW")
                         )))));
 
-        when(client.p1AZEvaluateDecisionRequest(any(), any(), anyString(), json(any()))).thenReturn(response);
+        when(client.pingAZEvaluateDecisionRequest(any(), any(), json(any()))).thenReturn(response);
 
         // When
         Action result = node.process(getContext(sharedState, json(object()), emptyList()));
@@ -192,39 +185,24 @@ public class PingOneAuthorizeNodeTest {
     }
 
     @Test
-    public void testPingOneCommunicationFailed() throws Exception {
-        // Given
-        given(pingOneWorkerService.getAccessTokenId(any(), any())).willReturn(null);
-        given(pingOneWorkerService.getAccessTokenId(realm, worker)).willThrow(new PingOneWorkerException(""));
-        JsonValue sharedState = json(object(
-                field(USERNAME, USER),
-                field(REALM, "/realm"),
-                field(PINGONE_AUTHORIZE_ATTRIBUTE, "some-attribute-value")
-                                           ));
-        JsonValue transientState = json(object());
-
-        // When
-        Action result = node.process(getContext(sharedState, transientState, emptyList()));
-
-        // Then
-        assertThat(result.outcome).isEqualTo(CLIENT_ERROR_OUTCOME_ID);
-    }
-
-    @Test
     public void testGetInputs() {
         List<String> attributes = new ArrayList<>();
         attributes.add("some-attribute-value-1");
         attributes.add("some-attribute-value-2");
 
-        given(config.attributeList()).willReturn(attributes);
+        given(config.attributeMap()).willReturn(attributes);
+        given(config.accessTokenAttribute()).willReturn("some-access-token");
 
         InputState[] inputs = node.getInputs();
 
-        assertThat(inputs[0].name).isEqualTo("some-attribute-value-1");
-        assertThat(inputs[0].required).isEqualTo(false);
+        assertThat(inputs[0].name).isEqualTo("some-access-token");
+        assertThat(inputs[0].required).isEqualTo(true);
 
-        assertThat(inputs[1].name).isEqualTo("some-attribute-value-2");
+        assertThat(inputs[1].name).isEqualTo("some-attribute-value-1");
         assertThat(inputs[1].required).isEqualTo(false);
+
+        assertThat(inputs[2].name).isEqualTo("some-attribute-value-2");
+        assertThat(inputs[2].required).isEqualTo(false);
     }
 
     @Test
@@ -235,7 +213,7 @@ public class PingOneAuthorizeNodeTest {
 
     @Test
     public void testContinueGetOutcomes() throws Exception {
-        PingOneAuthorizeNode.OutcomeProvider outcomeProvider = new PingOneAuthorizeNode.OutcomeProvider();
+        PingAuthorizeNode.OutcomeProvider outcomeProvider = new PingAuthorizeNode.OutcomeProvider();
 
         JsonValue nodeAttributes = json(object(
             field(USECONTINUEATTR, true)));
@@ -252,7 +230,7 @@ public class PingOneAuthorizeNodeTest {
 
     @Test
     public void testWithoutContinueGetOutcomes() throws Exception {
-        PingOneAuthorizeNode.OutcomeProvider outcomeProvider = new PingOneAuthorizeNode.OutcomeProvider();
+        PingAuthorizeNode.OutcomeProvider outcomeProvider = new PingAuthorizeNode.OutcomeProvider();
 
         List<String> statementCodes = new ArrayList<>();
         statementCodes.add("approved");

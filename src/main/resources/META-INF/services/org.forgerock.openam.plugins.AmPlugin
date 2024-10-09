@@ -14,4 +14,4 @@
 # Copyright 2024 ForgeRock AS.
 #
 
-org.forgerock.am.marketplace.pingoneauthorize.PingOneAuthorizePlugin
+org.forgerock.am.marketplace.pingauthorize.PingOneAuthorizePlugin
