@@ -15,7 +15,7 @@
     <artifactId>TNTPPingAuthorize</artifactId>
 
     <groupId>org.forgerock.am.marketplace</groupId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>PingAuthorize</name>
     <description>PingAuthorize Integration</description>
 
@@ -121,7 +121,11 @@
             <artifactId>openam-test-utils</artifactId>
             <scope>test</scope>
         </dependency>
-    </dependencies>
+                <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+            </dependency>
+</dependencies>
 
     <repositories>
         <repository>
