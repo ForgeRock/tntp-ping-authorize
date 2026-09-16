@@ -8,7 +8,7 @@
 package org.forgerock.am.marketplace.pingauthorize;
 
 import com.google.inject.assistedinject.Assisted;
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openam.annotations.sm.Attribute;
 import org.forgerock.openam.auth.node.api.Action;

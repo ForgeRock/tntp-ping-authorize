@@ -50,7 +50,7 @@ import static java.util.Arrays.asList;
  * @since AM 5.5.0
  */
 public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
-    protected static final String CURRENT_VERSION = "1.0.0";
+    protected static final String CURRENT_VERSION = "1.0.1";
     protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
     private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
     private static final String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
@@ -64,7 +64,7 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
     @Override
     protected Map<String, Iterable<? extends Class<? extends Node>>> getNodesByVersion() {
         return new ImmutableMap.Builder<String, Iterable<? extends Class<? extends Node>>>()
-            .put("1.0.0", asList(PingAuthorizeNode.class))
+            .put("1.0.1", asList(PingAuthorizeNode.class))
             .build();
     }
 
