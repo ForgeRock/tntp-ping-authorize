@@ -12,35 +12,72 @@ import static org.forgerock.json.JsonValue.object;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
-
+import org.forgerock.http.HttpApplicationException;
 import org.forgerock.http.header.MalformedHeaderException;
 import org.forgerock.http.header.authorization.BearerToken;
 import org.forgerock.http.header.AuthorizationHeader;
+import org.forgerock.http.handler.HttpClientHandler;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Status;
-import org.forgerock.http.Handler;
 import org.forgerock.json.JsonValue;
 import org.forgerock.services.context.RootContext;
+import org.forgerock.util.Options;
+import org.forgerock.util.time.Duration;
 
 /**
  * Service to integrate with PingOne Authorize APIs.
+ * <p>
+ * The service owns a dedicated, pooled {@link HttpClientHandler} so that TLS connections to the
+ * PingAuthorize endpoint are kept alive and reused across requests, instead of being torn down
+ * (or competing for AM's shared client pool) on every call.
  */
 @Singleton
-public class PingAuthorizeService {
+public class PingAuthorizeService implements AutoCloseable {
 
-    private final Handler handler;
+    /**
+     * Maximum number of pooled connections. The pool is dedicated to the PingAuthorize endpoint,
+     * so a single route; both the total and per-route limits are set to this value.
+     */
+    private static final int MAX_CONNECTIONS = 32;
+
+    /** Connect timeout. */
+    private static final Duration CONNECT_TIMEOUT = Duration.duration(3, TimeUnit.SECONDS);
+
+    /** Response (socket) timeout. */
+    private static final Duration SO_TIMEOUT = Duration.duration(10, TimeUnit.SECONDS);
+
+    private final org.forgerock.http.Handler handler;
 
     /**
      * Creates a new instance that will close the underlying HTTP client upon shutdown.
      */
     @Inject
-    public PingAuthorizeService(@Named("CloseableHttpClientHandler") org.forgerock.http.Handler handler) {
+    public PingAuthorizeService() throws HttpApplicationException {
+        this(createDefaultHandler());
+    }
+
+    /**
+     * Creates a new instance that will use the given HTTP handler. Intended for testing.
+     *
+     * @param handler the HTTP handler to use.
+     */
+    PingAuthorizeService(org.forgerock.http.Handler handler) {
         this.handler = handler;
+    }
+
+    private static HttpClientHandler createDefaultHandler() throws HttpApplicationException {
+        return new HttpClientHandler(Options.defaultOptions()
+                .set(HttpClientHandler.OPTION_REUSE_CONNECTIONS, true)
+                .set(HttpClientHandler.OPTION_MAX_CONNECTIONS, MAX_CONNECTIONS)
+                .set(HttpClientHandler.OPTION_POOLED_CONNECTION_TTL, -1L)
+                .set(HttpClientHandler.OPTION_CONNECT_TIMEOUT, CONNECT_TIMEOUT)
+                .set(HttpClientHandler.OPTION_SO_TIMEOUT, SO_TIMEOUT)
+                .set(HttpClientHandler.OPTION_RETRY_REQUESTS, true));
     }
 
     /**
@@ -67,12 +104,14 @@ public class PingAuthorizeService {
         JsonValue body = json(object(1));
         body.put("attributes", decisionData);
 
-        // Send the API request
+        // Send the API request. The response is always closed (in the finally block) so that the
+        // underlying TLS connection is released back to the pool and can be kept alive for reuse.
+        Response response = null;
         try {
             request = new Request().setUri(uri).setMethod("POST");
             request.getEntity().setJson(body);
             addAuthorizationHeader(request, accessToken);
-            Response response = handler.handle(new RootContext(), request).getOrThrow();
+            response = handler.handle(new RootContext(), request).getOrThrow();
             if (response.getStatus() == Status.CREATED || response.getStatus() == Status.OK) {
                 return json(response.getEntity().getJson());
             } else {
@@ -82,6 +121,10 @@ public class PingAuthorizeService {
             }
         } catch (MalformedHeaderException | InterruptedException | IOException e) {
             throw new PingAuthorizeServiceException("Failed to process client authorization" + e);
+        } finally {
+            if (response != null) {
+                response.close();
+            }
         }
     }
 
@@ -97,5 +140,19 @@ public class PingAuthorizeService {
         BearerToken bearerToken = new BearerToken(accessToken);
         header.setRawValue(BearerToken.NAME + " " + bearerToken.getToken());
         request.addHeaders(header);
+    }
+
+    /**
+     * Closes the underlying HTTP client, releasing all pooled connections. Safe to call more than once.
+     */
+    @Override
+    public void close() {
+        if (handler instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) handler).close();
+            } catch (Exception e) {
+                // Nothing useful can be done at this point; closing must not throw.
+            }
+        }
     }
 }

@@ -125,6 +125,14 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
             </dependency>
+            <!-- HTTP client provider used by the PingAuthorizeService's pooled HttpClientHandler.
+                 Provided at runtime by AM; only needed on the classpath for tests. -->
+            <dependency>
+                <groupId>org.forgerock.http</groupId>
+                <artifactId>chf-client-apache-sync</artifactId>
+                <version>26.5.0-20240315145234-7d028cc3ac9ec7e586cf524461da02ad911f2e06</version>
+                <scope>test</scope>
+            </dependency>
 </dependencies>
 
     <repositories>
