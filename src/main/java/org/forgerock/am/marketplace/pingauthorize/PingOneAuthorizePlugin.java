@@ -11,6 +11,7 @@ package org.forgerock.am.marketplace.pingauthorize;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import org.forgerock.openam.auth.node.api.AbstractNodeAmPlugin;
 import org.forgerock.openam.auth.node.api.Node;
 import org.forgerock.openam.plugins.PluginException;
@@ -54,6 +55,30 @@ public class PingOneAuthorizePlugin extends AbstractNodeAmPlugin {
     protected static final String LOG_APPENDER = "[Version: " + CURRENT_VERSION + "][Marketplace] ";
     private static final Logger logger = LoggerFactory.getLogger(PingOneAuthorizePlugin.class);
     private static final String LOGGER_PREFIX = "[PingOneAuthorizePlugin]" + PingOneAuthorizePlugin.LOG_APPENDER;
+
+    private PingAuthorizeService pingAuthorizeService;
+
+    /**
+     * Sets the {@link PingAuthorizeService} used by the nodes of this plugin, so that its pooled
+     * HTTP client can be closed on shutdown.
+     *
+     * @param pingAuthorizeService the service instance.
+     */
+    @Inject(optional = true)
+    public void setPingAuthorizeService(PingAuthorizeService pingAuthorizeService) {
+        this.pingAuthorizeService = pingAuthorizeService;
+    }
+
+    /**
+     * Closes the {@link PingAuthorizeService} so its pooled TLS connections are released.
+     */
+    @Override
+    public void onShutdown() {
+        if (pingAuthorizeService != null) {
+            logger.debug("{} Closing PingAuthorizeService HTTP client", LOGGER_PREFIX);
+            pingAuthorizeService.close();
+        }
+    }
 
     /**
      * Specify the Map of list of node classes that the plugin is providing. These will then be installed and
